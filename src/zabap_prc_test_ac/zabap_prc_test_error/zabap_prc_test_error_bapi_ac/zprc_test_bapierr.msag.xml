@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>PRC Test: BAPI error scenarios</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>NO_ERROR: Warning from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>NO_ERROR: Information from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>NO_ERROR: Success from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>CALL_ERROR: First error from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>CALL_ERROR: Second error from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>CALL_ERROR: Warning from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>CALL_ERROR: Information from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>CALL_ERROR_WITH_UPDATE: First error from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>CALL_ERROR_WITH_UPDATE: Second error from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>CALL_ERROR_WITH_UPDATE: Warning from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>CALL_ERROR_WITH_UPDATE: Information from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>CALL_MESSAGE_E: MESSAGE E in BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>CALL_ABORT: MESSAGE A in BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>CALL_DUMP: MESSAGE X in BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>UPDATE_*: Warning from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>UPDATE_*: Information from BAPI</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>017</MSGNR>
+     <TEXT>UPDATE_ERROR: MESSAGE E in update task</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>018</MSGNR>
+     <TEXT>UPDATE_ABORT: MESSAGE A in update task</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>019</MSGNR>
+     <TEXT>UPDATE_DUMP: MESSAGE X in update task</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_BAPIERR</ARBGB>
+     <MSGNR>020</MSGNR>
+     <TEXT>Scenario &amp;1 for &amp;2 processed successfully</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

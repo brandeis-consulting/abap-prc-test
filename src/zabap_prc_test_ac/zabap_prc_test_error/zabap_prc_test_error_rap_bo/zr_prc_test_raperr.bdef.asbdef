@@ -1,0 +1,42 @@
+managed with additional save implementation in class zbp_r_prc_test_raperr unique;
+strict ( 2 );
+
+define behavior for ZR_PRC_Test_RapErr alias RapErr
+persistent table zprc_test_raperr
+lock master
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  create;
+  update;
+  delete;
+
+  field ( numbering : managed, readonly ) UUID;
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+
+  // Scenario no_error (also modify_lock_error: there the lock error comes from the framework)
+  action noError;
+  // Scenario modify_error: error directly in MODIFY
+  action modifyError;
+  // Scenario check_before_save_error: error in the check_before_save phase
+  action checkBeforeSaveError;
+  // Scenario late_save_messages: messages in save_modified without FAILED - the save happens
+  action lateSaveMessages;
+  // Scenario late_save_failed: FAILED in save_modified (CL_ABAP_BEHAVIOR_SAVER_FAILED)
+  action lateSaveFailed;
+
+  // Managed BO: check_before_save belongs to the framework, which runs the
+  // on-save validations there. The error is therefore raised here.
+  validation checkBeforeSave on save { create; field Text; }
+
+  mapping for zprc_test_raperr corresponding
+  {
+    UUID               = uuid;
+    Text               = text;
+    CreatedBy          = created_by;
+    CreatedAt          = created_at;
+    LastChangedBy      = last_changed_by;
+    LastChangedAt      = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

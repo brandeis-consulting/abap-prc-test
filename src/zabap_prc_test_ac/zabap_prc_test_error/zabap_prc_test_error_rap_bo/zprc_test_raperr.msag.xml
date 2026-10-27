@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>PRC Test: RAP BO Fehlerszenarien</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>NO_ERROR: Warning from action noError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>NO_ERROR: Information from action noError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>MODIFY_ERROR: First error from action modifyError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>MODIFY_ERROR: Second error from action modifyError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>MODIFY_ERROR: Warning from action modifyError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>MODIFY_ERROR: Information from action modifyError</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: First error in check_before_save phase</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Second error in check_before_save phase</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Warning in check_before_save phase</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Information in check_before_save phase</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>SAVE_MODIFIED: First error from save_modified</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>SAVE_MODIFIED: Second error from save_modified</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>SAVE_MODIFIED: Warning from save_modified</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>SAVE_MODIFIED: Information from save_modified</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>Scenario &amp;1 for instance &amp;2 processed successfully</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>Scenario &amp;1 for instance &amp;2 failed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <MSGNR>017</MSGNR>
+     <TEXT>Unknown scenario &apos;&amp;1&apos; in payload</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>
