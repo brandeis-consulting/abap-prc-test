@@ -583,7 +583,7 @@ ENDCLASS.
 CLASS ltc_header_rules IMPLEMENTATION.
 
   METHOD setup.
-    handler = zcl_prc_message_handler=>create_message_handler( ).
+    handler = zcl_prc_msg_handler_for_test=>create( ).
   ENDMETHOD.
 
 
@@ -720,7 +720,7 @@ CLASS ltc_severity_rules IMPLEMENTATION.
 
   METHOD bapi_blank_type_is_error.
     " A BAPI return line without type is not W, I or S: it is stored as E and fails the handler
-    DATA(handler) = zcl_prc_message_handler=>create_message_handler( ).
+    DATA(handler) = zcl_prc_msg_handler_for_test=>create( ).
 
     TRY.
         handler->add_bapi_result( VALUE #( ( type = space id = 'ZPRC_TEST_MSG_HDLR' number = '001' message_v1 = 'blank' ) ) ).
@@ -804,7 +804,7 @@ ENDCLASS.
 CLASS ltc_add_exception IMPLEMENTATION.
 
   METHOD setup.
-    handler = zcl_prc_message_handler=>create_message_handler( ).
+    handler = zcl_prc_msg_handler_for_test=>create( ).
   ENDMETHOD.
 
 

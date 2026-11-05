@@ -2,6 +2,10 @@
 "!
 "! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
 "! and tells the BAPI Z_PRC_TEST_BAPIERR how to behave.
+"! <p class="shorttext synchronized">PRC Test: Process for BAPI error scenarios</p>
+"!
+"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
+"! and tells the BAPI Z_PRC_TEST_BAPIERR how to behave.
 CLASS zcl_prc_test_bapierr_proc DEFINITION
   PUBLIC
   FINAL
@@ -15,7 +19,8 @@ CLASS zcl_prc_test_bapierr_proc DEFINITION
     TYPES ty_scenario TYPE string.
 
     CONSTANTS co_class_name   TYPE zprc_process_impl_class VALUE 'ZCL_PRC_TEST_BAPIERR_PROC'.
-    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'PRC_TEST_BAPI_ERROR'.
+    " Test processes start with TEST_ (not productive)
+    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'TEST_BAPI_ERROR'.
 
     CONSTANTS: BEGIN OF scenario,
                  no_error               TYPE ty_scenario VALUE `NO_ERROR`,

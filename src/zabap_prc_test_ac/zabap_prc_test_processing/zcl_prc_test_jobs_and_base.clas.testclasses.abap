@@ -29,7 +29,7 @@ ENDCLASS.
 CLASS ltc_handler_base IMPLEMENTATION.
   METHOD defaults.
     DATA(handler) = CAST zif_prc_transition_handler( NEW lcl_minimal_transition( ) ).
-    DATA(messages) = zcl_prc_message_handler=>create_message_handler( ).
+    DATA(messages) = zcl_prc_msg_handler_for_test=>create( ).
     DATA(ext_uuid) = xco_cp=>uuid( )->value.
     DATA payload TYPE zprc_payload_json.
 

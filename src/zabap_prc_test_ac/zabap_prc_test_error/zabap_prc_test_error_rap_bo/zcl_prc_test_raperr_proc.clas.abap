@@ -10,6 +10,10 @@
 "!
 "! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
 "! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
+"! <p class="shorttext synchronized">PRC Test: Process for RAP BO error scenarios</p>
+"!
+"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
+"! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
 CLASS zcl_prc_test_raperr_proc DEFINITION
   PUBLIC
   FINAL
@@ -23,7 +27,8 @@ CLASS zcl_prc_test_raperr_proc DEFINITION
     TYPES ty_scenario TYPE string.
 
     CONSTANTS co_class_name   TYPE zprc_process_impl_class VALUE 'ZCL_PRC_TEST_RAPERR_PROC'.
-    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'PRC_TEST_RAP_ERROR'.
+    " Test processes start with TEST_ (not productive)
+    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'TEST_RAP_ERROR'.
 
     CONSTANTS: BEGIN OF scenario,
                  no_error                TYPE ty_scenario VALUE `NO_ERROR`,

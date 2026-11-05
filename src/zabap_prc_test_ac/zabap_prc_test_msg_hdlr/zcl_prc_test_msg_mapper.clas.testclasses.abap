@@ -170,7 +170,7 @@ ENDCLASS.
 CLASS ltc_handler IMPLEMENTATION.
 
   METHOD setup.
-    handler = zcl_prc_message_handler=>create_message_handler( ).
+    handler = zcl_prc_msg_handler_for_test=>create( ).
   ENDMETHOD.
 
 

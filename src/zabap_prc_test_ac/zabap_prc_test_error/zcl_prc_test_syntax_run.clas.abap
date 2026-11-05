@@ -13,6 +13,21 @@
 "!   2b CREATE_ONLY with intact class, then delete the DTEL, then PROCESS_ONLY:
 "!      processing of an existing object (main session of the engine)
 "! Restore the data element after each case.
+"! <p class="shorttext synchronized">PRC Test: Manual syntax error test</p>
+"!
+"! Creates and/or processes objects of process TEST_SYNTAX_ERROR. No static
+"! reference to the process or handler class, so this classrun stays runnable while
+"! one of them has a syntax error. Choose the step with constant CO_MODE.
+"!
+"! Case 0 (all active, CREATE_AND_PROCESS): object FINISHED.
+"! Case 1 (delete DTEL ZPRC_TEST_SYNTAX_HANDLER, CREATE_AND_PROCESS): syntax error in
+"!   the handler, loaded in the step session - failed step with the abort text.
+"! Case 2 (delete DTEL ZPRC_TEST_SYNTAX_PROCESS): syntax error in the process class,
+"!   also loaded in this main session (protected by ZCL_PRC_PROCESS_LOADER).
+"!   2a CREATE_AND_PROCESS: creation and processing of a new object
+"!   2b CREATE_ONLY with intact class, then delete the DTEL, then PROCESS_ONLY:
+"!      processing of an existing object (main session of the engine)
+"! Restore the data element after each case.
 CLASS zcl_prc_test_syntax_run DEFINITION
   PUBLIC
   FINAL
@@ -22,7 +37,8 @@ CLASS zcl_prc_test_syntax_run DEFINITION
     INTERFACES if_oo_adt_classrun.
   PROTECTED SECTION.
   PRIVATE SECTION.
-    CONSTANTS co_process_name TYPE zprc_process_name VALUE 'PRC_TEST_SYNTAX_ERROR'.
+    " Test processes start with TEST_ (not productive)
+    CONSTANTS co_process_name TYPE zprc_process_name VALUE 'TEST_SYNTAX_ERROR'.
 
     "! CREATE_AND_PROCESS | CREATE_ONLY | PROCESS_ONLY
     CONSTANTS co_mode TYPE string VALUE `CREATE_AND_PROCESS`.

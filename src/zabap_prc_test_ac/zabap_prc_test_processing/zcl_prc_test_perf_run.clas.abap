@@ -10,13 +10,25 @@
 "! difference to the time of the main session.
 "!
 "! Set CO_COUNT to 1, 1000 or 100000. The dialog timeout applies to the classrun.
+"! <p class="shorttext synchronized">PRC Test: Performance measurement</p>
+"!
+"! Measures the framework with a process without logic (ZCL_PRC_TEST_PERF_PROC):
+"! CO_COUNT objects are created (blocks of 10,000 with commit) and processed via
+"! the same entry as the retry job. Output: durations, throughput, data volume.
+"!
+"! As classrun on purpose (not as application job), so the main session can be
+"! traced. To include the isolated steps and the parallel packages (sessions of
+"! their own), use a trace request for the user (object type: any) instead of
+"! "Profile As".
+"!
+"! Set CO_COUNT to 1, 1000 or 10000. The dialog timeout applies to the classrun.
 CLASS zcl_prc_test_perf_run DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     INTERFACES if_oo_adt_classrun.
   PROTECTED SECTION.
   PRIVATE SECTION.
     "! Number of objects of the measurement
-    CONSTANTS co_count   TYPE i VALUE 10000.
+    CONSTANTS co_count   TYPE i VALUE 200.
     "! Delete the objects of the measurement afterwards
     CONSTANTS co_cleanup TYPE abap_bool VALUE abap_true.
     CONSTANTS co_block   TYPE i VALUE 10000.

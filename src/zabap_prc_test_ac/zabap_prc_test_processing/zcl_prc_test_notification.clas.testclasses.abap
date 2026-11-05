@@ -131,7 +131,7 @@ CLASS ltc_transitions IMPLEMENTATION.
 
   METHOD transition.
     CLEAR: e_new_state, e_failed.
-    handler = zcl_prc_message_handler=>create_message_handler( ).
+    handler = zcl_prc_msg_handler_for_test=>create( ).
     DATA(lo_transition) = i_process->get_transition_handler( i_start_state      = i_state
                                                              i_processed_object = 'TEST' ).
     lo_transition->initialize( i_process_name              = 'TEST'
@@ -297,7 +297,7 @@ CLASS ltc_run_prepare IMPLEMENTATION.
 
   METHOD prepare.
     CLEAR: e_new_state, e_failed, e_payload.
-    handler = zcl_prc_message_handler=>create_message_handler( ).
+    handler = zcl_prc_msg_handler_for_test=>create( ).
     DATA(payload) = zcl_prc_notification=>payload_to_json( VALUE #( run_uuid = run_uuid ) ).
     DATA(lo_process) = CAST zif_prc_process( NEW zcl_prc_notif_run_proc( ) ).
     DATA(lo_transition) = lo_process->get_transition_handler( i_start_state      = zif_prc_process=>co_start

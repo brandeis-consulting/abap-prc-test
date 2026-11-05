@@ -34,6 +34,25 @@
 "! <li>Admin fields: '' = unchanged / set correctly, 'CHANGED', 'MODIFIED',
 "!     'MISSING' or 'INVALID'</li>
 "! </ul>
+"! <p class="shorttext synchronized">PRC Test: Fixture for processing tests</p>
+"!
+"! Pure mechanics, no expectations: delete own data, insert the given state
+"! directly into the PRC tables, trigger the processing and read the actual
+"! state completely.
+"!
+"! Given and actual use the same structure (TY_DATA), so a test compares the
+"! complete actual state with one ASSERT_EQUALS. Only non-deterministic values
+"! are mapped to stable ones:
+"! <ul>
+"! <li>UUIDs: references - objects by external ID (O1), steps per object in
+"!     creation order (S1, S2, ...), runs by the given reference (R1)</li>
+"! <li>Timestamps (retry, not before): seconds relative to the start of the run,
+"!     rounded to full minutes ('+300', '-60'); initial = ''</li>
+"! <li>Process name and factory class of the fixture (constructor): ''</li>
+"! <li>Admin fields: '' = unchanged / set correctly, 'CHANGED', 'MODIFIED',
+"!     'MISSING' or 'INVALID'</li>
+"! </ul>
+"! Test processes start with TEST_, demo processes with DEMO_ (not productive).
 CLASS zcl_prc_test_proc_fixture DEFINITION
   PUBLIC
   FINAL
@@ -41,8 +60,8 @@ CLASS zcl_prc_test_proc_fixture DEFINITION
   FOR TESTING.
 
   PUBLIC SECTION.
-    CONSTANTS co_process_name       TYPE zprc_process_name       VALUE 'PRC_TEST_PROC'.
-    CONSTANTS co_other_process_name TYPE zprc_process_name       VALUE 'PRC_TEST_PROC_OTHER'.
+    CONSTANTS co_process_name       TYPE zprc_process_name       VALUE 'TEST_PROC'.
+    CONSTANTS co_other_process_name TYPE zprc_process_name       VALUE 'TEST_PROC_OTHER'.
     CONSTANTS co_factory            TYPE zprc_process_impl_class VALUE 'ZCL_PRC_TEST_PROC_PROCESS'.
 
     TYPES: BEGIN OF ty_object,
@@ -230,7 +249,10 @@ CLASS zcl_prc_test_proc_fixture IMPLEMENTATION.
       lt_names = VALUE #( ( sign = 'I' option = 'EQ' low = i_process_name ) ).
     ELSE.
       lt_names = VALUE #( ( sign = 'I' option = 'EQ' low = co_process_name )
-                          ( sign = 'I' option = 'EQ' low = co_other_process_name ) ).
+                          ( sign = 'I' option = 'EQ' low = co_other_process_name )
+                          " Names of the test processes before 0.2.0 (renamed to TEST_*):
+                          " left-over data of older test runs is removed as well
+                          ( sign = 'I' option = 'CP' low = 'PRC_TEST_*' ) ).
     ENDIF.
 
     SELECT uuid, run_uuid FROM zprc_proc_object
