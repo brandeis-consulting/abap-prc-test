@@ -143,15 +143,13 @@ CLASS ltc_run_notification IMPLEMENTATION.
 
     " Notification object of the run, not processed yet
     DATA(ext_uuid) = xco_cp=>uuid( )->value.
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #(
-            ( processName         = zcl_prc_notif_run_proc=>co_process_name
-              factoryClassName    = zcl_prc_notif_run_proc=>co_class_name
-              processedObject     = 'PRC_TEST_RUN_NOTE'
-              processedObjectUUID = ext_uuid
-              payloadJson         = zcl_prc_notification=>payload_to_json( VALUE #( run_uuid = mv_run_uuid ) ) ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-no_execution ).
+    zcl_prc_processing_api=>get_instance( )->create( VALUE #(
+        ( processName         = zcl_prc_notif_run_proc=>co_process_name
+          factoryClassName    = zcl_prc_notif_run_proc=>co_class_name
+          processedObject     = 'PRC_TEST_RUN_NOTE'
+          processedObjectUUID = ext_uuid
+          payloadJson         = zcl_prc_notification=>payload_to_json( VALUE #( run_uuid = mv_run_uuid ) ) ) ) ).
+    COMMIT WORK.
     SELECT SINGLE * FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
       WHERE ProcessName = @zcl_prc_notif_run_proc=>co_process_name AND ExternalProcessedObjectUUID = @ext_uuid
       INTO @DATA(before).
@@ -189,12 +187,9 @@ CLASS ltc_edges IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD create_nothing.
-    " An empty list is no error and writes nothing
+    " An empty list is no error, writes nothing and does not commit
     TRY.
-        zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-            i_create_processed_objects = VALUE #( )
-            i_perform_commit           = abap_false
-            i_trigger_processing       = zcl_prc_processing_api=>execution_mode-direct_execution ).
+        zcl_prc_processing_api=>get_instance( )->create_and_process( VALUE #( ) ).
       CATCH cx_root INTO DATA(error).
         cl_abap_unit_assert=>fail( msg = error->get_text( ) ).
     ENDTRY.

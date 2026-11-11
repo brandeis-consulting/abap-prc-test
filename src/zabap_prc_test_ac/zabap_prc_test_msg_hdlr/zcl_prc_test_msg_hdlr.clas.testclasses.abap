@@ -5,8 +5,8 @@
 "! Messages of a step are compared as a SORTED table (key: message ID, number,
 "! severity, variables - see ZCL_PRC_TEST_PROC_FIXTURE=>TT_MESSAGES). Their
 "! order of arrival is NOT checked here; the expectations are written in that
-"! sorted order. The order of the handler is tested in LTC_ADD_EXCEPTION and
-"! LTC_HEADER_RULES.
+"! sorted order. The order of the handler is tested in LTC_ADD_EXCEPTION, the header
+"! rules of the engine in LTC_STEP_HEADER.
 CLASS ltc_base DEFINITION ABSTRACT
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -37,9 +37,6 @@ CLASS ltc_from_sy DEFINITION INHERITING FROM ltc_base FINAL
     METHODS abort_fails              FOR TESTING.
     METHODS termination_fails        FOR TESTING.
     METHODS warning_succeeds         FOR TESTING.
-    METHODS error_no_fail            FOR TESTING.
-    METHODS abort_no_fail            FOR TESTING.
-    METHODS termination_no_fail      FOR TESTING.
 ENDCLASS.
 
 
@@ -102,51 +99,6 @@ CLASS ltc_from_sy IMPLEMENTATION.
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_W' text = 'Transition from SY_W successful' severity_code = 3 ) ) ) ).
   ENDMETHOD.
 
-
-  METHOD error_no_fail.
-    " I_FAIL_ON_ERROR_MESSAGE = abap_false: the error is stored, the transition succeeds
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'SY_E_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'SY_E_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_E_NOFAIL' text = 'Transition from SY_E_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' text = 'Message e' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_E_NOFAIL' text = 'Transition from SY_E_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD abort_no_fail.
-    " A behaves like E: with I_FAIL_ON_ERROR_MESSAGE = abap_false it is stored as E, the transition succeeds
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'SY_A_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'SY_A_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_A_NOFAIL' text = 'Transition from SY_A_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'a' text = 'Message a' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_A_NOFAIL' text = 'Transition from SY_A_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD termination_no_fail.
-    " X behaves like E: with I_FAIL_ON_ERROR_MESSAGE = abap_false it is stored as E, the transition succeeds
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'SY_X_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'SY_X_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_X_NOFAIL' text = 'Transition from SY_X_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'x' text = 'Message x' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'SY_X_NOFAIL' text = 'Transition from SY_X_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
 ENDCLASS.
 
 
@@ -159,9 +111,6 @@ CLASS ltc_from_text DEFINITION INHERITING FROM ltc_base FINAL
     METHODS abort_fails              FOR TESTING.
     METHODS termination_fails        FOR TESTING.
     METHODS warning_succeeds         FOR TESTING.
-    METHODS error_no_fail            FOR TESTING.
-    METHODS abort_no_fail            FOR TESTING.
-    METHODS termination_no_fail      FOR TESTING.
 ENDCLASS.
 
 
@@ -223,48 +172,6 @@ CLASS ltc_from_text IMPLEMENTATION.
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_W' text = 'Transition from TEXT_W successful' severity_code = 3 ) ) ) ).
   ENDMETHOD.
 
-
-  METHOD error_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'TEXT_E_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'TEXT_E_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_E_NOFAIL' text = 'Transition from TEXT_E_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'SY' msgno = '499' msgty = 'E' msgv1 = 'Text e' text = 'Text e' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_E_NOFAIL' text = 'Transition from TEXT_E_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD abort_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'TEXT_A_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'TEXT_A_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_A_NOFAIL' text = 'Transition from TEXT_A_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'SY' msgno = '499' msgty = 'E' msgv1 = 'Text a' text = 'Text a' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_A_NOFAIL' text = 'Transition from TEXT_A_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD termination_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'TEXT_X_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'TEXT_X_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_X_NOFAIL' text = 'Transition from TEXT_X_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'SY' msgno = '499' msgty = 'E' msgv1 = 'Text x' text = 'Text x' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'TEXT_X_NOFAIL' text = 'Transition from TEXT_X_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
 ENDCLASS.
 
 
@@ -277,9 +184,6 @@ CLASS ltc_bapi_result DEFINITION INHERITING FROM ltc_base FINAL
     METHODS abort_fails              FOR TESTING.
     METHODS termination_fails        FOR TESTING.
     METHODS warning_succeeds         FOR TESTING.
-    METHODS error_no_fail            FOR TESTING.
-    METHODS abort_no_fail            FOR TESTING.
-    METHODS termination_no_fail      FOR TESTING.
 ENDCLASS.
 
 
@@ -340,56 +244,14 @@ CLASS ltc_bapi_result IMPLEMENTATION.
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_W' text = 'Transition from BAPI_W successful' severity_code = 3 ) ) ) ).
   ENDMETHOD.
 
-
-  METHOD error_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'BAPI_E_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'BAPI_E_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_E_NOFAIL' text = 'Transition from BAPI_E_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' text = 'Message e' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_E_NOFAIL' text = 'Transition from BAPI_E_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD abort_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'BAPI_A_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'BAPI_A_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_A_NOFAIL' text = 'Transition from BAPI_A_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'a' text = 'Message a' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_A_NOFAIL' text = 'Transition from BAPI_A_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
-
-  METHOD termination_no_fail.
-    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'BAPI_X_NOFAIL' step_total = 1 ) ) ) ).
-
-    fixture->run( ).
-
-    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
-        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
-        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'BAPI_X_NOFAIL' end_state = 'FINISHED'
-                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_X_NOFAIL' text = 'Transition from BAPI_X_NOFAIL successful' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'x' text = 'Message x' severity_code = 1 )
-                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'S' msgv1 = 'BAPI_X_NOFAIL' text = 'Transition from BAPI_X_NOFAIL successful' severity_code = 3 ) ) ) ).
-  ENDMETHOD.
-
 ENDCLASS.
 
 
 "! Step header end-to-end, read from the persistence.
-"! Rules: success / failure message of the transition always win; otherwise the
-"! last message of the highest severity: E (incl. A, X) > S > W > I.
-"! A failure without any error message gets the PRC message
-"! ZPRC_PROCESS_MESSAGE/002 'Transition failed without error message'.
+"! Rules (ZCL_PRC_STEP_HEADER): on success the success message of the
+"! transition; on failure its failure message, else the last error (A and X
+"! are errors). A failure without any error message gets the PRC message
+"! ZPRC_PROCESS_MESSAGE/002 'Step failed without error message'.
 "! What is checked here is the header (STEPS) and the set of messages - not their order.
 CLASS ltc_header DEFINITION INHERITING FROM ltc_base FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
@@ -537,8 +399,8 @@ CLASS ltc_header IMPLEMENTATION.
         objects  = VALUE #( ( ref = 'O1' state = 'HDR_FAILED_WITHOUT_ERROR' step_total = 1 latest_step = 'S1' retry_count = 1 retry = '+300'
                               changed = 'CHANGED' etag = 'CHANGED' ) )
         steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'HDR_FAILED_WITHOUT_ERROR' end_state = 'HDR_FAILED_WITHOUT_ERROR'
-                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' msgty = 'E' text = 'Transition failed without error message' severity_code = 1 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' msgty = 'E' text = 'Transition failed without error message' severity_code = 1 )
+                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' msgty = 'E' text = 'Step failed without error message' severity_code = 1 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' msgty = 'E' text = 'Step failed without error message' severity_code = 1 )
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'I' msgv1 = 'i' text = 'Message i' severity_code = 5 )
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' text = 'Message w' severity_code = 2 ) ) ) ).
   ENDMETHOD.
@@ -546,11 +408,11 @@ CLASS ltc_header IMPLEMENTATION.
 ENDCLASS.
 
 
-"! Header rules on the message handler API directly (no processing, no persistence).
-"! Needed for S > W > I and "last of the same severity" for S, W and I: in a
-"! processing run these are always covered by the success / failure / error header.
-"! All messages are added with I_FAIL_ON_ERROR_MESSAGE = abap_false.
-CLASS ltc_header_rules DEFINITION FINAL
+"! Header rules of the engine (ZCL_PRC_STEP_HEADER) directly - no processing, no
+"! persistence. The step header is not a concept of the handler: on success the
+"! success message of the transition (default 017), on failure the failure
+"! message, else the last error, else 002.
+CLASS ltc_step_header DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
   PRIVATE SECTION.
@@ -560,27 +422,26 @@ CLASS ltc_header_rules DEFINITION FINAL
 
     METHODS setup.
 
-    "! MESSAGE ZPRC_TEST_MSG_HDLR/001 of type I_TYPE + ADD_MESSAGE_FROM_SY without failing
+    "! MESSAGE ZPRC_TEST_MSG_HDLR/001 of type I_TYPE + ADD_MESSAGE_FROM_SY;
+    "! an error fails the handler - that is caught here
     METHODS add IMPORTING i_type TYPE symsgty
-                          i_v1   TYPE symsgv
-                RAISING   cx_static_check.
+                          i_v1   TYPE symsgv.
 
-    METHODS info_then_warning              FOR TESTING RAISING cx_static_check.
-    METHODS warning_then_info              FOR TESTING RAISING cx_static_check.
-    METHODS warning_then_success           FOR TESTING RAISING cx_static_check.
-    METHODS success_then_warning           FOR TESTING RAISING cx_static_check.
-    METHODS success_then_error             FOR TESTING RAISING cx_static_check.
-    METHODS last_of_two_infos              FOR TESTING RAISING cx_static_check.
-    METHODS last_of_two_warnings           FOR TESTING RAISING cx_static_check.
-    METHODS last_of_two_successes          FOR TESTING RAISING cx_static_check.
-    METHODS last_of_two_errors             FOR TESTING RAISING cx_static_check.
-    METHODS abort_after_error              FOR TESTING RAISING cx_static_check.
-    METHODS termination_then_warning       FOR TESTING RAISING cx_static_check.
-    METHODS success_does_not_replace_error FOR TESTING RAISING cx_static_check.
+    "! Message key of a header, without the text
+    METHODS key IMPORTING i_header     TYPE ty_header
+                RETURNING VALUE(r_key) TYPE symsg.
+
+    METHODS last_of_two_errors           FOR TESTING.
+    METHODS abort_after_error            FOR TESTING.
+    METHODS error_outranks_later_warning FOR TESTING.
+    METHODS failure_message_wins         FOR TESTING.
+    METHODS no_error_gets_002            FOR TESTING.
+    METHODS success_default_017          FOR TESTING RAISING cx_static_check.
+    METHODS success_not_in_handler       FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
-CLASS ltc_header_rules IMPLEMENTATION.
+CLASS ltc_step_header IMPLEMENTATION.
 
   METHOD setup.
     handler = zcl_prc_msg_handler_for_test=>create( ).
@@ -589,79 +450,16 @@ CLASS ltc_header_rules IMPLEMENTATION.
 
   METHOD add.
     MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE i_type NUMBER '001' WITH i_v1 INTO DATA(lv_dummy) ##NEEDED.
-    handler->add_message_from_sy( i_fail_on_error_message = abap_false ).
+    TRY.
+        handler->add_message_from_sy( ).
+      CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
+        " An error fails the handler - the messages are kept all the same
+    ENDTRY.
   ENDMETHOD.
 
 
-  METHOD info_then_warning.
-    add( i_type = 'I' i_v1 = 'i' ).
-    add( i_type = 'W' i_v1 = 'w' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' message_text = 'Message w' ) ).
-  ENDMETHOD.
-
-
-  METHOD warning_then_info.
-    add( i_type = 'W' i_v1 = 'w' ).
-    add( i_type = 'I' i_v1 = 'i' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' message_text = 'Message w' ) ).
-  ENDMETHOD.
-
-
-  METHOD warning_then_success.
-    add( i_type = 'W' i_v1 = 'w' ).
-    add( i_type = 'S' i_v1 = 's' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'S' msgv1 = 's' message_text = 'Message s' ) ).
-  ENDMETHOD.
-
-
-  METHOD success_then_warning.
-    add( i_type = 'S' i_v1 = 's' ).
-    add( i_type = 'W' i_v1 = 'w' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'S' msgv1 = 's' message_text = 'Message s' ) ).
-  ENDMETHOD.
-
-
-  METHOD success_then_error.
-    add( i_type = 'S' i_v1 = 's' ).
-    add( i_type = 'E' i_v1 = 'e' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' message_text = 'Message e' ) ).
-  ENDMETHOD.
-
-
-  METHOD last_of_two_infos.
-    add( i_type = 'I' i_v1 = 'i1' ).
-    add( i_type = 'I' i_v1 = 'i2' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'I' msgv1 = 'i2' message_text = 'Message i2' ) ).
-  ENDMETHOD.
-
-
-  METHOD last_of_two_warnings.
-    add( i_type = 'W' i_v1 = 'w1' ).
-    add( i_type = 'W' i_v1 = 'w2' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w2' message_text = 'Message w2' ) ).
-  ENDMETHOD.
-
-
-  METHOD last_of_two_successes.
-    add( i_type = 'S' i_v1 = 's1' ).
-    add( i_type = 'S' i_v1 = 's2' ).
-
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'S' msgv1 = 's2' message_text = 'Message s2' ) ).
+  METHOD key.
+    r_key = VALUE #( msgty = i_header-msgty msgid = i_header-msgid msgno = i_header-msgno msgv1 = i_header-msgv1 ).
   ENDMETHOD.
 
 
@@ -669,39 +467,82 @@ CLASS ltc_header_rules IMPLEMENTATION.
     add( i_type = 'E' i_v1 = 'e1' ).
     add( i_type = 'E' i_v1 = 'e2' ).
 
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' message_text = 'Message e2' ) ).
+    cl_abap_unit_assert=>assert_equals(
+        act = key( zcl_prc_step_header=>for_failure( handler ) )
+        exp = VALUE symsg( msgty = 'E' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgv1 = 'e2' ) ).
   ENDMETHOD.
 
 
   METHOD abort_after_error.
-    " A is an error like E: the later abort (stored as E) wins
+    " A is an error like E: the later abort (stored as E) is the header
     add( i_type = 'E' i_v1 = 'e' ).
     add( i_type = 'A' i_v1 = 'a' ).
 
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'a' message_text = 'Message a' ) ).
+    cl_abap_unit_assert=>assert_equals(
+        act = key( zcl_prc_step_header=>for_failure( handler ) )
+        exp = VALUE symsg( msgty = 'E' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgv1 = 'a' ) ).
   ENDMETHOD.
 
 
-  METHOD termination_then_warning.
-    " X is an error like E: it outranks the later warning
+  METHOD error_outranks_later_warning.
+    " X is an error like E: a later warning is never the header of a failed step
     add( i_type = 'X' i_v1 = 'x' ).
     add( i_type = 'W' i_v1 = 'w' ).
 
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'x' message_text = 'Message x' ) ).
+    cl_abap_unit_assert=>assert_equals(
+        act = key( zcl_prc_step_header=>for_failure( handler ) )
+        exp = VALUE symsg( msgty = 'E' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgv1 = 'x' ) ).
   ENDMETHOD.
 
 
-  METHOD success_does_not_replace_error.
-    " In the handler a later S does not replace an E: the error stays the header.
-    " (The success header of a step comes from the transition, not from the handler.)
+  METHOD failure_message_wins.
+    " The failure message of the transition is added as the last error and is the header
+    add( i_type = 'W' i_v1 = 'w' ).
     add( i_type = 'E' i_v1 = 'e' ).
-    add( i_type = 'S' i_v1 = 's' ).
 
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
-        msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' message_text = 'Message e' ) ).
+    DATA(header) = zcl_prc_step_header=>for_failure(
+                       i_message_handler = handler
+                       i_failure_message = VALUE #( msgty = 'E' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '004' msgv1 = 'f' ) ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = key( header )
+        exp = VALUE symsg( msgty = 'E' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '004' msgv1 = 'f' ) ).
+    cl_abap_unit_assert=>assert_equals( act = lines( handler->get_messages( ) ) exp = 3
+                                        msg = 'The failure message is one of the messages of the step' ).
+  ENDMETHOD.
+
+
+  METHOD no_error_gets_002.
+    " Failed without any error (e.g. an exception of a weaker severity): ZPRC_PROCESS_MESSAGE/002
+    add( i_type = 'W' i_v1 = 'w' ).
+
+    DATA(header) = zcl_prc_step_header=>for_failure( handler ).
+
+    cl_abap_unit_assert=>assert_equals( act = key( header )
+                                        exp = VALUE symsg( msgty = 'E' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' ) ).
+    cl_abap_unit_assert=>assert_equals( act = header-message_text exp = `Step failed without error message` ).
+  ENDMETHOD.
+
+
+  METHOD success_default_017.
+    " Without a success message of the transition the engine uses 017
+    DATA(header) = zcl_prc_step_header=>for_success( i_transition      = VALUE #( )
+                                                     i_message_handler = handler ).
+
+    cl_abap_unit_assert=>assert_equals( act = key( header )
+                                        exp = VALUE symsg( msgty = 'S' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '017' ) ).
+    cl_abap_unit_assert=>assert_equals( act = header-message_text exp = `Step processed successfully` ).
+  ENDMETHOD.
+
+
+  METHOD success_not_in_handler.
+    " The success header is persisted with the commit only - it is not added to the handler
+    add( i_type = 'W' i_v1 = 'w' ).
+
+    zcl_prc_step_header=>for_success( i_transition      = VALUE #( )
+                                      i_message_handler = handler ).
+
+    cl_abap_unit_assert=>assert_equals( act = lines( handler->get_messages( ) ) exp = 1 ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -729,9 +570,10 @@ CLASS ltc_severity_rules IMPLEMENTATION.
         " expected
     ENDTRY.
 
-    DATA(header) = handler->get_header( ).
+    DATA(messages) = handler->get_messages( ).
+    DATA(message) = messages[ 1 ].
     cl_abap_unit_assert=>assert_equals(
-        act = VALUE symsg( msgid = header-msgid msgno = header-msgno msgty = header-msgty msgv1 = header-msgv1 )
+        act = VALUE symsg( msgid = message-msgid msgno = message-msgno msgty = message-msgty msgv1 = message-msgv1 )
         exp = VALUE symsg( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'blank' ) ).
     cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
   ENDMETHOD.
@@ -795,8 +637,7 @@ CLASS ltc_add_exception DEFINITION FINAL
 
     METHODS t100_exception_keeps_key      FOR TESTING RAISING cx_static_check.
     METHODS plain_exception_as_text       FOR TESTING RAISING cx_static_check.
-    METHODS chain_outer_is_header         FOR TESTING RAISING cx_static_check.
-    METHODS no_fail_keeps_handler_open    FOR TESTING RAISING cx_static_check.
+    METHODS chain_outer_is_last_error     FOR TESTING RAISING cx_static_check.
     METHODS dyn_msg_warning_does_not_fail FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
@@ -827,7 +668,8 @@ CLASS ltc_add_exception IMPLEMENTATION.
         " expected
     ENDTRY.
 
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
+    DATA(messages) = handler->get_messages( ).
+    cl_abap_unit_assert=>assert_equals( act = messages[ 1 ] exp = VALUE ty_header(
         msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'x1' message_text = 'Message x1' ) ).
     cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
   ENDMETHOD.
@@ -840,36 +682,33 @@ CLASS ltc_add_exception IMPLEMENTATION.
       CATCH lcx_plain INTO DATA(error).
     ENDTRY.
 
-    handler->add_exception( i_exception = error i_fail_on_error_message = abap_false ).
+    TRY.
+        handler->add_exception( error ).
+      CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
+        " An error exception fails the handler
+    ENDTRY.
 
-    DATA(header) = handler->get_header( ).
+    DATA(messages) = handler->get_messages( ).
+    DATA(header) = messages[ 1 ].
     cl_abap_unit_assert=>assert_equals(
         act = VALUE ty_header( msgid = header-msgid msgno = header-msgno msgty = header-msgty message_text = header-message_text )
         exp = VALUE ty_header( msgid = 'SY' msgno = '499' msgty = 'E' message_text = 'Plain text' ) ).
   ENDMETHOD.
 
 
-  METHOD chain_outer_is_header.
-    " The cause comes first, the exception itself last - so the outer one is the header
-    handler->add_exception( i_exception             = t100_exception( i_v1       = 'outer'
-                                                                      i_previous = t100_exception( i_v1 = 'inner' ) )
-                            i_fail_on_error_message = abap_false ).
+  METHOD chain_outer_is_last_error.
+    " The cause comes first, the exception itself last - so the outer one is the last error
+    TRY.
+        handler->add_exception( t100_exception( i_v1       = 'outer'
+                                                i_previous = t100_exception( i_v1 = 'inner' ) ) ).
+      CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
+        " An error exception fails the handler
+    ENDTRY.
 
     cl_abap_unit_assert=>assert_equals(
         act = VALUE string_table( FOR m IN handler->get_messages( ) ( CONV #( m-msgv1 ) ) )
         exp = VALUE string_table( ( `inner` ) ( `outer` ) ) ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgv1 exp = 'outer' ).
-  ENDMETHOD.
-
-
-  METHOD no_fail_keeps_handler_open.
-    " I_FAIL_ON_ERROR_MESSAGE = abap_false: the error is stored, the handler does not fail
-    handler->add_exception( i_exception             = t100_exception( i_v1 = 'e' )
-                            i_fail_on_error_message = abap_false ).
-
-    cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
-    cl_abap_unit_assert=>assert_equals( act = lines( handler->get_messages( ) ) exp = 1 ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgty exp = 'E' ).
+    cl_abap_unit_assert=>assert_equals( act = zcl_prc_step_header=>for_failure( handler )-msgv1 exp = 'outer' ).
   ENDMETHOD.
 
 
@@ -878,7 +717,8 @@ CLASS ltc_add_exception IMPLEMENTATION.
     handler->add_exception( t100_exception( i_type = 'W' i_v1 = 'w' ) ).
 
     cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( ) exp = VALUE ty_header(
+    DATA(messages) = handler->get_messages( ).
+    cl_abap_unit_assert=>assert_equals( act = messages[ 1 ] exp = VALUE ty_header(
         msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' message_text = 'Message w' ) ).
   ENDMETHOD.
 
@@ -928,7 +768,8 @@ CLASS ltc_default_success IMPLEMENTATION.
 
   METHOD default_success_message.
     " A transition that redefines no success message: the step header is the
-    " default of the base class ZPRC_PROCESS_MESSAGE/017 with the start state
+    " default of the engine ZPRC_PROCESS_MESSAGE/017 - start and end state are
+    " shown with the step anyway
     fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'DEFAULT_SUCCESS' step_total = 1 ) ) ) ).
 
     fixture->run( ).
@@ -936,10 +777,60 @@ CLASS ltc_default_success IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
         objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
         steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'DEFAULT_SUCCESS' end_state = 'FINISHED'
-                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '017' msgty = 'S' msgv1 = 'DEFAULT_SUCCESS'
-                              text = 'Transition from state DEFAULT_SUCCESS completed successfully' severity_code = 3 ) )
-        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '017' msgty = 'S' msgv1 = 'DEFAULT_SUCCESS'
-                              text = 'Transition from state DEFAULT_SUCCESS completed successfully' severity_code = 3 ) ) ) ).
+                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '017' msgty = 'S'
+                              text = 'Step processed successfully' severity_code = 3 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '017' msgty = 'S'
+                              text = 'Step processed successfully' severity_code = 3 ) ) ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Type of the success message end-to-end, read from the persistence:
+"! S, I and W are kept; any other type is a program error that fails the step.
+CLASS ltc_success_message DEFINITION INHERITING FROM ltc_base FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS type_i_is_kept FOR TESTING.
+    METHODS type_e_fails   FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_success_message IMPLEMENTATION.
+
+  METHOD type_i_is_kept.
+    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'SUCCESS_TYPE_I' step_total = 1 ) ) ) ).
+
+    fixture->run( ).
+
+    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
+        objects  = VALUE #( ( ref = 'O1' state = 'FINISHED' step_total = 1 latest_step = 'S1' changed = 'CHANGED' etag = 'CHANGED' ) )
+        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'SUCCESS_TYPE_I' end_state = 'FINISHED'
+                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'I' msgv1 = 'SUCCESS_TYPE_I'
+                              text = 'Transition from SUCCESS_TYPE_I successful' severity_code = 5 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' text = 'Message w' severity_code = 2 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '002' msgty = 'I' msgv1 = 'SUCCESS_TYPE_I'
+                              text = 'Transition from SUCCESS_TYPE_I successful' severity_code = 5 ) ) ) ).
+  ENDMETHOD.
+
+
+  METHOD type_e_fails.
+    " A success message of type E is a program error: the step fails with 023 and is rolled back
+    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'SUCCESS_TYPE_E' step_total = 1 ) ) ) ).
+
+    fixture->run( ).
+
+    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
+        objects  = VALUE #( ( ref = 'O1' state = 'SUCCESS_TYPE_E' step_total = 1 latest_step = 'S1' retry_count = 1 retry = '+300'
+                              changed = 'CHANGED' etag = 'CHANGED' ) )
+        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'SUCCESS_TYPE_E' end_state = 'SUCCESS_TYPE_E'
+                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '023' msgty = 'E' msgv1 = 'ZPRC_TEST_MSG_HDLR' msgv2 = '002' msgv3 = 'E'
+                              text = 'Program error: success message ZPRC_TEST_MSG_HDLR 002 has type E (allowed: S, I, W)' severity_code = 1 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '023' msgty = 'E'
+                              msgv1 = 'ZPRC_TEST_MSG_HDLR' msgv2 = '002' msgv3 = 'E'
+                              text = 'Program error: success message ZPRC_TEST_MSG_HDLR 002 has type E (allowed: S, I, W)' severity_code = 1 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' text = 'Message w' severity_code = 2 ) ) ) ).
   ENDMETHOD.
 
 ENDCLASS.

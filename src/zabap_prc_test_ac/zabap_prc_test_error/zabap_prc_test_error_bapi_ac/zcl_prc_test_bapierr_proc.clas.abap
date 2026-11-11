@@ -79,15 +79,13 @@ CLASS zcl_prc_test_bapierr_proc IMPLEMENTATION.
 
 
   METHOD start.
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName         = co_process_name
-                                                factoryClassName    = co_class_name
-                                                processedObject     = get_external_id( i_uuid )
-                                                processedObjectUUID = i_uuid
-                                                payloadJson         = xco_cp_json=>data->from_abap(
-                                                                        VALUE ty_payload( scenario = i_scenario ) )->to_string( ) ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-direct_execution ).
+    zcl_prc_processing_api=>get_instance( )->create_and_process(
+        VALUE #( ( processName         = co_process_name
+                   factoryClassName    = co_class_name
+                   processedObject     = get_external_id( i_uuid )
+                   processedObjectUUID = i_uuid
+                   payloadJson         = xco_cp_json=>data->from_abap(
+                                           VALUE ty_payload( scenario = i_scenario ) )->to_string( ) ) ) ).
   ENDMETHOD.
 
 

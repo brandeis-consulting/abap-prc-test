@@ -188,12 +188,14 @@ CLASS ltc_control_bgpf_direct IMPLEMENTATION.
     GET TIME STAMP FIELD DATA(lv_ts).
     DATA(lv_ext_id) = CONV lcl_helper=>ty_ext_id( |CTRL{ lv_ts }| ).
 
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName      = zcl_prc_test_bgpf_proc=>co_process_name
-                                                factoryClassName = zcl_prc_test_bgpf_proc=>co_class_name
-                                                processedObject  = lv_ext_id ) )
-        i_perform_commit           = abap_false
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-bgpf_execution ).
+    TRY.
+        zcl_prc_processing_api=>get_instance( )->create_and_schedule_bgpf(
+            VALUE #( ( processName      = zcl_prc_test_bgpf_proc=>co_process_name
+                       factoryClassName = zcl_prc_test_bgpf_proc=>co_class_name
+                       processedObject  = lv_ext_id ) ) ).
+      CATCH cx_bgmc INTO DATA(lx_bgmc).
+        cl_abap_unit_assert=>fail( |bgPF not scheduled: { lx_bgmc->get_text( ) }| ).
+    ENDTRY.
     COMMIT WORK AND WAIT.
 
     DATA(lv_state) = lcl_helper=>wait_for_finished( lv_ext_id ).

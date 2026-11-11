@@ -161,7 +161,7 @@ CLASS ltc_handler DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHOR
     METHODS setup.
     METHODS eml_failed_fails_step         FOR TESTING.
     METHODS eml_error_without_failed      FOR TESTING.
-    METHODS eml_error_fails_if_requested  FOR TESTING.
+    METHODS eml_warning_is_collected      FOR TESTING.
     METHODS text_error_fails_step         FOR TESTING.
     METHODS text_warning_is_collected     FOR TESTING.
 ENDCLASS.
@@ -187,7 +187,7 @@ CLASS ltc_handler IMPLEMENTATION.
 
 
   METHOD eml_error_without_failed.
-    " Default: an E message without FAILED (state message, other instance) is only collected
+    " An error is an error: E in REPORTED fails the step also without FAILED
     DATA reported TYPE RESPONSE FOR REPORTED EARLY zr_prc_runtp.
     DATA failed   TYPE RESPONSE FOR FAILED EARLY zr_prc_runtp.
     reported-run = VALUE #( ( %cid = 'A' %msg = NEW lcx_behv_message( i_severity = if_abap_behv_message=>severity-error
@@ -195,27 +195,29 @@ CLASS ltc_handler IMPLEMENTATION.
     TRY.
         handler->add_eml_modify_result( i_failed   = failed
                                         i_reported = reported ).
-      CATCH zcx_prc_unit_of_work_failed.
-        cl_abap_unit_assert=>fail( msg = 'No FAILED: the step goes on' ).
+        cl_abap_unit_assert=>fail( msg = 'An E message in REPORTED must fail the step' ).
+      CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
     ENDTRY.
-    cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = lines( messages ) exp = 1 ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgno exp = '010' ).
   ENDMETHOD.
 
 
-  METHOD eml_error_fails_if_requested.
+  METHOD eml_warning_is_collected.
+    " A warning in REPORTED without FAILED is only collected
     DATA reported TYPE RESPONSE FOR REPORTED EARLY zr_prc_runtp.
-    reported-run = VALUE #( ( %cid = 'A' %msg = NEW lcx_behv_message( i_severity = if_abap_behv_message=>severity-error
+    reported-run = VALUE #( ( %cid = 'A' %msg = NEW lcx_behv_message( i_severity = if_abap_behv_message=>severity-warning
                                                                      i_t100key  = VALUE #( msgid = 'ZPRC_RUN' msgno = '010' ) ) ) ).
     TRY.
-        handler->add_eml_modify_result( i_reported              = reported
-                                        i_fail_on_error_message = abap_true ).
-        cl_abap_unit_assert=>fail( msg = 'E message must fail the step when requested' ).
-      CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
+        handler->add_eml_modify_result( i_reported = reported ).
+      CATCH zcx_prc_unit_of_work_failed.
+        cl_abap_unit_assert=>fail( msg = 'A warning does not fail' ).
     ENDTRY.
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
+    DATA(messages) = handler->get_messages( ).
+    cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgty exp = 'W' ).
   ENDMETHOD.
 
 
@@ -227,9 +229,9 @@ CLASS ltc_handler IMPLEMENTATION.
       CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
     ENDTRY.
     cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
-    DATA(header) = handler->get_header( ).
-    cl_abap_unit_assert=>assert_equals( act = header-msgid exp = 'SY' ).
-    cl_abap_unit_assert=>assert_equals( act = header-msgno exp = '499' ).
+    DATA(messages) = handler->get_messages( ).
+    cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgid exp = 'SY' ).
+    cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgno exp = '499' ).
   ENDMETHOD.
 
 

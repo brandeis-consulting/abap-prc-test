@@ -55,13 +55,11 @@ CLASS zcl_prc_test_perf_run IMPLEMENTATION.
     DATA(created) = 0.
     WHILE created < co_count.
       DATA(block_size) = nmin( val1 = co_block val2 = co_count - created ).
-      api->create_processed_objects(
-          i_create_processed_objects = VALUE #( FOR i = created + 1 UNTIL i > created + block_size
-                                                ( processName      = zcl_prc_test_perf_proc=>co_process_name
-                                                  factoryClassName = zcl_prc_test_perf_proc=>co_class_name
-                                                  processedObject  = |PERF{ i WIDTH = 7 ALIGN = RIGHT PAD = '0' }| ) )
-          i_perform_commit           = abap_true
-          i_trigger_processing       = zcl_prc_processing_api=>execution_mode-no_execution ).
+      api->create( VALUE #( FOR i = created + 1 UNTIL i > created + block_size
+                            ( processName      = zcl_prc_test_perf_proc=>co_process_name
+                              factoryClassName = zcl_prc_test_perf_proc=>co_class_name
+                              processedObject  = |PERF{ i WIDTH = 7 ALIGN = RIGHT PAD = '0' }| ) ) ).
+      COMMIT WORK.
       created += block_size.
     ENDWHILE.
     GET TIME STAMP FIELD t_created.

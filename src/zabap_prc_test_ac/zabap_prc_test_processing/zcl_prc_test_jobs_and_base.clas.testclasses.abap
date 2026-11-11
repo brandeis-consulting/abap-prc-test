@@ -51,12 +51,8 @@ CLASS ltc_handler_base IMPLEMENTATION.
                                         exp = VALUE symsg( msgty = 'W' msgid = 'ZPRC_RUN' msgno = '001'
                                                            msgv1 = 'V1' msgv2 = 'V2' ) ).
 
-    " Default success header: 'Transition from state &1 completed successfully'
-    DATA(success) = handler->get_success_message( ).
-    cl_abap_unit_assert=>assert_equals( act = success-msgid exp = 'ZPRC_PROCESS_MESSAGE' ).
-    cl_abap_unit_assert=>assert_equals( act = success-msgno exp = '017' ).
-    cl_abap_unit_assert=>assert_equals( act = success-msgty exp = 'S' ).
-
+    cl_abap_unit_assert=>assert_initial( act = handler->get_success_message( )
+                                         msg = 'No success header by default: the engine uses 017' ).
     cl_abap_unit_assert=>assert_initial( act = handler->get_failure_message( )
                                          msg = 'No failure header by default: the last error is the header' ).
     cl_abap_unit_assert=>assert_initial( act = handler->get_message_prefix_for_log( )

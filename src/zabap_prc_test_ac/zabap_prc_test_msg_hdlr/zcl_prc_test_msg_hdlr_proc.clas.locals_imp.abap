@@ -54,15 +54,13 @@ CLASS lcl_transition DEFINITION INHERITING FROM zcl_prc_transition_handlr_base.
     DATA mv_start_state TYPE ty_state.
 
     "! ADD_MESSAGE_FROM_SY with ZPRC_TEST_MSG_HDLR/001
-    METHODS via_sy   IMPORTING i_type    TYPE symsgty
-                               i_v1      TYPE symsgv
-                               i_no_fail TYPE abap_bool DEFAULT abap_false
+    METHODS via_sy   IMPORTING i_type TYPE symsgty
+                               i_v1   TYPE symsgv
                      RAISING   zcx_prc_unit_of_work_failed.
 
     "! ADD_MESSAGE_FROM_TEXT
-    METHODS via_text IMPORTING i_type    TYPE symsgty
-                               i_text    TYPE string
-                               i_no_fail TYPE abap_bool DEFAULT abap_false
+    METHODS via_text IMPORTING i_type TYPE symsgty
+                               i_text TYPE string
                      RAISING   zcx_prc_unit_of_work_failed.
 
     "! One BAPI return line ZPRC_TEST_MSG_HDLR/001 (for ADD_BAPI_RESULT)
@@ -84,34 +82,22 @@ CLASS lcl_transition IMPLEMENTATION.
 
     CASE i_start_state.
       " ADD_MESSAGE_FROM_SY
-      WHEN state-sy_e.         via_sy( i_type = 'E' i_v1 = 'e' ).
-      WHEN state-sy_a.         via_sy( i_type = 'A' i_v1 = 'a' ).
-      WHEN state-sy_x.         via_sy( i_type = 'X' i_v1 = 'x' ).
-      WHEN state-sy_w.         via_sy( i_type = 'W' i_v1 = 'w' ).
-      WHEN state-sy_e_nofail.  via_sy( i_type = 'E' i_v1 = 'e' i_no_fail = abap_true ).
-      WHEN state-sy_a_nofail.  via_sy( i_type = 'A' i_v1 = 'a' i_no_fail = abap_true ).
-      WHEN state-sy_x_nofail.  via_sy( i_type = 'X' i_v1 = 'x' i_no_fail = abap_true ).
+      WHEN state-sy_e.          via_sy( i_type = 'E' i_v1 = 'e' ).
+      WHEN state-sy_a.          via_sy( i_type = 'A' i_v1 = 'a' ).
+      WHEN state-sy_x.          via_sy( i_type = 'X' i_v1 = 'x' ).
+      WHEN state-sy_w.          via_sy( i_type = 'W' i_v1 = 'w' ).
 
       " ADD_MESSAGE_FROM_TEXT
       WHEN state-text_e.        via_text( i_type = 'E' i_text = `Text e` ).
       WHEN state-text_a.        via_text( i_type = 'A' i_text = `Text a` ).
       WHEN state-text_x.        via_text( i_type = 'X' i_text = `Text x` ).
       WHEN state-text_w.        via_text( i_type = 'W' i_text = `Text w` ).
-      WHEN state-text_e_nofail. via_text( i_type = 'E' i_text = `Text e` i_no_fail = abap_true ).
-      WHEN state-text_a_nofail. via_text( i_type = 'A' i_text = `Text a` i_no_fail = abap_true ).
-      WHEN state-text_x_nofail. via_text( i_type = 'X' i_text = `Text x` i_no_fail = abap_true ).
 
       " ADD_BAPI_RESULT
       WHEN state-bapi_e.        handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'E' i_v1 = 'e' ) ) ) ).
       WHEN state-bapi_a.        handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'A' i_v1 = 'a' ) ) ) ).
       WHEN state-bapi_x.        handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'X' i_v1 = 'x' ) ) ) ).
       WHEN state-bapi_w.        handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'W' i_v1 = 'w' ) ) ) ).
-      WHEN state-bapi_e_nofail. handler->add_bapi_result( i_bapiret               = VALUE #( ( bapi_line( i_type = 'E' i_v1 = 'e' ) ) )
-                                                          i_fail_on_error_message = abap_false ).
-      WHEN state-bapi_a_nofail. handler->add_bapi_result( i_bapiret               = VALUE #( ( bapi_line( i_type = 'A' i_v1 = 'a' ) ) )
-                                                          i_fail_on_error_message = abap_false ).
-      WHEN state-bapi_x_nofail. handler->add_bapi_result( i_bapiret               = VALUE #( ( bapi_line( i_type = 'X' i_v1 = 'x' ) ) )
-                                                          i_fail_on_error_message = abap_false ).
       WHEN state-bapi_e_then_w. handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'E' i_v1 = 'e' ) )
                                                                    ( bapi_line( i_type = 'W' i_v1 = 'w' ) ) ) ).
       WHEN state-bapi_e1_e2.    handler->add_bapi_result( VALUE #( ( bapi_line( i_type = 'E' i_v1 = 'e1' ) )
@@ -141,6 +127,10 @@ CLASS lcl_transition IMPLEMENTATION.
         via_sy( i_type = 'I' i_v1 = 'i' ).
         handler->add_eml_modify_result( i_failed = VALUE ty_failed_only( failed = abap_true ) ).
 
+      " Success message of another type (see GET_SUCCESS_MESSAGE)
+      WHEN state-success_type_i OR state-success_type_e.
+        via_sy( i_type = 'W' i_v1 = 'w' ).
+
       " Unexpected errors
       WHEN state-unexpected_t100_chain.
         raise_unexpected_chain( ).
@@ -149,7 +139,16 @@ CLASS lcl_transition IMPLEMENTATION.
 
 
   METHOD get_success_message.
-    MESSAGE s002(zprc_test_msg_hdlr) WITH mv_start_state INTO DATA(lv_dummy) ##NEEDED.
+    CASE mv_start_state.
+      WHEN zcl_prc_test_msg_hdlr_proc=>state-success_type_i.
+        " Kept: I is a valid type of a success message
+        MESSAGE i002(zprc_test_msg_hdlr) WITH mv_start_state INTO DATA(lv_dummy) ##NEEDED.
+      WHEN zcl_prc_test_msg_hdlr_proc=>state-success_type_e.
+        " Program error: a success message of type E fails the step
+        MESSAGE e002(zprc_test_msg_hdlr) WITH mv_start_state INTO lv_dummy.
+      WHEN OTHERS.
+        MESSAGE s002(zprc_test_msg_hdlr) WITH mv_start_state INTO lv_dummy.
+    ENDCASE.
     r_message = sy_message( ).
   ENDMETHOD.
 
@@ -169,14 +168,13 @@ CLASS lcl_transition IMPLEMENTATION.
 
   METHOD via_sy.
     MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE i_type NUMBER '001' WITH i_v1 INTO DATA(lv_dummy) ##NEEDED.
-    get_message_handler( )->add_message_from_sy( i_fail_on_error_message = xsdbool( i_no_fail = abap_false ) ).
+    get_message_handler( )->add_message_from_sy( ).
   ENDMETHOD.
 
 
   METHOD via_text.
-    get_message_handler( )->add_message_from_text( i_message_text           = i_text
-                                                   i_message_severity       = i_type
-                                                   i_fail_on_error_message  = xsdbool( i_no_fail = abap_false ) ).
+    get_message_handler( )->add_message_from_text( i_message_text     = i_text
+                                                   i_message_severity = i_type ).
   ENDMETHOD.
 
 

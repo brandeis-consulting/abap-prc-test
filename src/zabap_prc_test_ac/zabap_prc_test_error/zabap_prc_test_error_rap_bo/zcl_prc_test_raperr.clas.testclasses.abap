@@ -263,16 +263,15 @@ CLASS ltc_modify_lock_error IMPLEMENTATION.
 
 
   METHOD modify_lock_error.
-    " 1) Create the processed object without processing it: START commits, which
+    " 1) Create the processed object without processing it and commit: the commit
     "    would release a lock set before
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName         = zcl_prc_test_raperr_proc=>co_process_name
-                                                factoryClassName    = zcl_prc_test_raperr_proc=>co_class_name
-                                                processedObject     = zcl_prc_test_raperr_proc=>get_external_id( mv_bo_uuid )
-                                                processedObjectUUID = mv_bo_uuid
-                                                payloadJson         = zcl_prc_test_raperr_proc=>build_payload( get_scenario( ) ) ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-no_execution ).
+    zcl_prc_processing_api=>get_instance( )->create( VALUE #(
+        ( processName         = zcl_prc_test_raperr_proc=>co_process_name
+          factoryClassName    = zcl_prc_test_raperr_proc=>co_class_name
+          processedObject     = zcl_prc_test_raperr_proc=>get_external_id( mv_bo_uuid )
+          processedObjectUUID = mv_bo_uuid
+          payloadJson         = zcl_prc_test_raperr_proc=>build_payload( get_scenario( ) ) ) ) ).
+    COMMIT WORK.
 
     DATA(lv_ext_id) = zcl_prc_test_raperr_proc=>get_external_id( mv_bo_uuid ).
     SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
@@ -401,6 +400,16 @@ CLASS ltc_late_save_failed IMPLEMENTATION.
     assert_state( zif_prc_process=>co_start ).
     assert_bo_messages( expected_messages( i_first       = '011'
                                            i_with_errors = abap_true ) ).
+
+    " The commit failed: the success message of the transition (015) is not part of the
+    " failed step - it is persisted with the commit of a successful step only
+    DATA(lt_messages) = get_persisted_messages( ).
+    cl_abap_unit_assert=>assert_false(
+        act = xsdbool( line_exists( lt_messages[ msgid = co_msgid msgno = '015' ] ) )
+        msg = 'Success message persisted for a step whose commit failed' ).
+    cl_abap_unit_assert=>assert_true(
+        act = xsdbool( line_exists( lt_messages[ msgid = co_msgid msgno = '016' msgty = 'E' ] ) )
+        msg = 'Failure message of the transition missing' ).
   ENDMETHOD.
 
 ENDCLASS.

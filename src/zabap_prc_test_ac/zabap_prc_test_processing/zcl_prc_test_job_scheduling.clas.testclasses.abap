@@ -22,6 +22,54 @@ CLASS lcl_scheduler_double IMPLEMENTATION.
 ENDCLASS.
 
 
+"! Records the scheduled bgPF processes; fails on request like the bgPF framework would
+CLASS lcl_bgpf_double DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_prc_bgpf_scheduler.
+    DATA calls TYPE STANDARD TABLE OF zif_prc_processing_engine=>tt_parameters WITH EMPTY KEY.
+    DATA fail  TYPE abap_bool.
+ENDCLASS.
+
+CLASS lcl_bgpf_double IMPLEMENTATION.
+  METHOD zif_prc_bgpf_scheduler~schedule.
+    IF fail = abap_true.
+      RAISE EXCEPTION NEW cx_bgmc_operation( ).
+    ENDIF.
+    APPEND i_parameters TO calls.
+  ENDMETHOD.
+ENDCLASS.
+
+
+"! Helpers for the processing API tests: one test object of the fixture process
+CLASS lcl_object DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    CONSTANTS co_external_id TYPE c LENGTH 10 VALUE 'SCHED1'.
+    CLASS-METHODS to_create RETURNING VALUE(r_objects) TYPE zcl_prc_processing_api=>tt_create_processed_objects.
+    CLASS-METHODS read_uuid RETURNING VALUE(r_uuid) TYPE sysuuid_x16.
+    CLASS-METHODS read_state RETURNING VALUE(r_state) TYPE zr_prc_processedobject-State.
+ENDCLASS.
+
+CLASS lcl_object IMPLEMENTATION.
+  METHOD to_create.
+    r_objects = VALUE #( ( processName      = zcl_prc_test_proc_fixture=>co_process_name
+                           factoryClassName = zcl_prc_test_proc_fixture=>co_factory
+                           processedObject  = co_external_id ) ).
+  ENDMETHOD.
+
+  METHOD read_uuid.
+    SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
+      WHERE ProcessName = @zcl_prc_test_proc_fixture=>co_process_name AND ExternalProcessedObjectID = @co_external_id
+      INTO @r_uuid.
+  ENDMETHOD.
+
+  METHOD read_state.
+    SELECT SINGLE State FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
+      WHERE ProcessName = @zcl_prc_test_proc_fixture=>co_process_name AND ExternalProcessedObjectID = @co_external_id
+      INTO @r_state.
+  ENDMETHOD.
+ENDCLASS.
+
+
 "! initiateRun and the save of the run BO
 CLASS ltc_run_app_save DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
@@ -138,17 +186,17 @@ CLASS ltc_run_app_save IMPLEMENTATION.
 ENDCLASS.
 
 
-"! Asynchronous processing via application job (processing API)
+"! Processing API: create and schedule as application job
 CLASS ltc_api_job DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
     DATA double TYPE REF TO lcl_scheduler_double.
 
     METHODS setup.
     METHODS teardown.
-    METHODS schedules_retry_job FOR TESTING.
-    METHODS error_is_tolerated  FOR TESTING.
-
-    METHODS create RETURNING VALUE(r_uuid) TYPE sysuuid_x16.
+    METHODS schedules_retry_job        FOR TESTING RAISING cx_apj_rt.
+    METHODS no_commit_by_the_api       FOR TESTING RAISING cx_apj_rt.
+    METHODS error_reaches_caller       FOR TESTING.
+    METHODS deprecated_tolerates_error FOR TESTING.
 ENDCLASS.
 
 
@@ -162,26 +210,15 @@ CLASS ltc_api_job IMPLEMENTATION.
 
 
   METHOD teardown.
+    ROLLBACK WORK.
     zcl_prc_job_scheduler_injector=>reset( ).
     zcl_prc_test_proc_fixture=>delete_own_data( ).
   ENDMETHOD.
 
 
-  METHOD create.
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName      = zcl_prc_test_proc_fixture=>co_process_name
-                                                factoryClassName = zcl_prc_test_proc_fixture=>co_factory
-                                                processedObject  = 'JOB1' ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-appl_job_execution ).
-    SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
-      WHERE ProcessName = @zcl_prc_test_proc_fixture=>co_process_name AND ExternalProcessedObjectID = 'JOB1'
-      INTO @r_uuid.
-  ENDMETHOD.
-
-
   METHOD schedules_retry_job.
-    DATA(uuid) = create( ).
+    zcl_prc_processing_api=>get_instance( )->create_and_schedule_job( lcl_object=>to_create( ) ).
+    DATA(uuid) = lcl_object=>read_uuid( ).
 
     cl_abap_unit_assert=>assert_equals( act = lines( double->calls ) exp = 1 ).
     DATA(call) = double->calls[ 1 ].
@@ -192,13 +229,114 @@ CLASS ltc_api_job IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD error_is_tolerated.
-    " Best effort: the object is created and stays due for the periodic retry job
+  METHOD no_commit_by_the_api.
+    " The caller's LUW decides: after a rollback nothing is left
+    zcl_prc_processing_api=>get_instance( )->create_and_schedule_job( lcl_object=>to_create( ) ).
+    ROLLBACK WORK.
+    cl_abap_unit_assert=>assert_initial( act = lcl_object=>read_uuid( ) msg = 'Not committed by the API' ).
+  ENDMETHOD.
+
+
+  METHOD error_reaches_caller.
+    " The caller asked for a job explicitly - a scheduling error must reach him
     double->fail = abap_true.
-    DATA(uuid) = create( ).
-    cl_abap_unit_assert=>assert_not_initial( act = uuid msg = 'Object created although no job could be scheduled' ).
-    SELECT SINGLE state FROM zprc_proc_object WHERE uuid = @uuid INTO @DATA(state).
-    cl_abap_unit_assert=>assert_equals( act = state exp = zif_prc_process=>co_start ).
+    TRY.
+        zcl_prc_processing_api=>get_instance( )->create_and_schedule_job( lcl_object=>to_create( ) ).
+        cl_abap_unit_assert=>fail( 'CX_APJ_RT expected' ).
+      CATCH cx_apj_rt ##NO_HANDLER.
+        " expected
+    ENDTRY.
+    " Written, not committed: the caller can roll back
+    ROLLBACK WORK.
+    cl_abap_unit_assert=>assert_initial( act = lcl_object=>read_uuid( ) msg = 'Nothing committed' ).
+  ENDMETHOD.
+
+
+  METHOD deprecated_tolerates_error.
+    " Unchanged behaviour of the deprecated method: created, committed, stays due for the retry job
+    double->fail = abap_true.
+    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
+        i_create_processed_objects = lcl_object=>to_create( )
+        i_perform_commit           = abap_true
+        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-appl_job_execution ).
+    cl_abap_unit_assert=>assert_equals( act = lcl_object=>read_state( ) exp = zif_prc_process=>co_start ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Processing API: create and schedule via bgPF
+CLASS ltc_api_bgpf DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+  PRIVATE SECTION.
+    DATA double TYPE REF TO lcl_bgpf_double.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS schedules_new_objects      FOR TESTING RAISING cx_bgmc.
+    METHODS no_commit_by_the_api       FOR TESTING RAISING cx_bgmc.
+    METHODS error_reaches_caller       FOR TESTING.
+    METHODS deprecated_tolerates_error FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_api_bgpf IMPLEMENTATION.
+
+  METHOD setup.
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+    double = NEW #( ).
+    zcl_prc_bgpf_sched_injector=>inject( double ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    ROLLBACK WORK.
+    zcl_prc_bgpf_sched_injector=>reset( ).
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+  ENDMETHOD.
+
+
+  METHOD schedules_new_objects.
+    zcl_prc_processing_api=>get_instance( )->create_and_schedule_bgpf( lcl_object=>to_create( ) ).
+    DATA(uuid) = lcl_object=>read_uuid( ).
+
+    cl_abap_unit_assert=>assert_equals( act = lines( double->calls ) exp = 1 msg = 'One bgPF process' ).
+    DATA(parameters) = double->calls[ 1 ].
+    DATA(s_uuid) = VALUE #( parameters[ selname = zcl_prc_retry_job=>s_uuid ]-low OPTIONAL ).
+    cl_abap_unit_assert=>assert_equals( act = CONV sysuuid_x16( s_uuid ) exp = uuid msg = 'Restricted to the new objects' ).
+  ENDMETHOD.
+
+
+  METHOD no_commit_by_the_api.
+    " The caller's LUW decides: after a rollback nothing is left
+    zcl_prc_processing_api=>get_instance( )->create_and_schedule_bgpf( lcl_object=>to_create( ) ).
+    ROLLBACK WORK.
+    cl_abap_unit_assert=>assert_initial( act = lcl_object=>read_uuid( ) msg = 'Not committed by the API' ).
+  ENDMETHOD.
+
+
+  METHOD error_reaches_caller.
+    " The caller asked for bgPF explicitly - a scheduling error must reach him
+    double->fail = abap_true.
+    TRY.
+        zcl_prc_processing_api=>get_instance( )->create_and_schedule_bgpf( lcl_object=>to_create( ) ).
+        cl_abap_unit_assert=>fail( 'CX_BGMC expected' ).
+      CATCH cx_bgmc ##NO_HANDLER.
+        " expected
+    ENDTRY.
+    " Written, not committed: the caller can roll back
+    ROLLBACK WORK.
+    cl_abap_unit_assert=>assert_initial( act = lcl_object=>read_uuid( ) msg = 'Nothing committed' ).
+  ENDMETHOD.
+
+
+  METHOD deprecated_tolerates_error.
+    " Unchanged behaviour of the deprecated method: created, committed, stays due for the retry job
+    double->fail = abap_true.
+    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
+        i_create_processed_objects = lcl_object=>to_create( )
+        i_perform_commit           = abap_true
+        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-bgpf_execution ).
+    cl_abap_unit_assert=>assert_equals( act = lcl_object=>read_state( ) exp = zif_prc_process=>co_start ).
   ENDMETHOD.
 
 ENDCLASS.

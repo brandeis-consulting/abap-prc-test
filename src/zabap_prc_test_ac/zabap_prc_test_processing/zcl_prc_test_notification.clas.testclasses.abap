@@ -175,7 +175,9 @@ CLASS ltc_transitions IMPLEMENTATION.
                           e_failed    = DATA(failed)
                 CHANGING  c_payload   = payload ).
 
-    cl_abap_unit_assert=>assert_false( act = failed msg = |Prepare failed: { handler->get_header( )-message_text }| ).
+    DATA(texts) = concat_lines_of( table = VALUE string_table( FOR m IN handler->get_messages( ) ( m-message_text ) )
+                                   sep   = `; ` ).
+    cl_abap_unit_assert=>assert_false( act = failed msg = |Prepare failed: { texts }| ).
     cl_abap_unit_assert=>assert_equals( act = new_state exp = zcl_prc_notification=>co_prepared ).
     zcl_prc_notification=>payload_from_json( EXPORTING i_json = payload IMPORTING e_payload = actual ).
     cl_abap_unit_assert=>assert_equals( act = actual-notification-recipient exp = co_mail ).
@@ -213,7 +215,10 @@ CLASS ltc_transitions IMPLEMENTATION.
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( failed ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgno exp = '007' ).
+    " The last error of the step
+    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
+    ENDLOOP.
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '007' ).
   ENDMETHOD.
 
   METHOD run_prepare_run_not_found.
@@ -224,8 +229,11 @@ CLASS ltc_transitions IMPLEMENTATION.
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( failed ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgid exp = 'ZPRC_NOTIFICATION' ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgno exp = '009' ).
+    " The last error of the step
+    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
+    ENDLOOP.
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgid exp = 'ZPRC_NOTIFICATION' ).
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '009' ).
   ENDMETHOD.
 
   METHOD send_without_notification.
@@ -236,7 +244,10 @@ CLASS ltc_transitions IMPLEMENTATION.
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( act = failed msg = 'Nothing prepared, nothing sent' ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgno exp = '007' ).
+    " The last error of the step
+    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
+    ENDLOOP.
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '007' ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -326,7 +337,9 @@ CLASS ltc_run_prepare IMPLEMENTATION.
                        e_failed    = DATA(failed)
                        e_payload   = DATA(payload) ).
 
-    cl_abap_unit_assert=>assert_false( act = failed msg = |Prepare failed: { handler->get_header( )-message_text }| ).
+    DATA(texts) = concat_lines_of( table = VALUE string_table( FOR m IN handler->get_messages( ) ( m-message_text ) )
+                                   sep   = `; ` ).
+    cl_abap_unit_assert=>assert_false( act = failed msg = |Prepare failed: { texts }| ).
     cl_abap_unit_assert=>assert_equals( act = new_state exp = zcl_prc_notification=>co_prepared ).
     cl_abap_unit_assert=>assert_equals( act = payload-notification-recipient exp = co_mail
                                         msg = 'Mail address of the user who started the run' ).
@@ -336,8 +349,11 @@ CLASS ltc_run_prepare IMPLEMENTATION.
     prepare( IMPORTING e_failed = DATA(failed) ).
 
     cl_abap_unit_assert=>assert_true( act = failed msg = 'No mail address, nothing to send' ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgid exp = 'ZPRC_NOTIFICATION' ).
-    cl_abap_unit_assert=>assert_equals( act = handler->get_header( )-msgno exp = '004' ).
+    " The last error of the step
+    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
+    ENDLOOP.
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgid exp = 'ZPRC_NOTIFICATION' ).
+    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '004' ).
   ENDMETHOD.
 ENDCLASS.
 

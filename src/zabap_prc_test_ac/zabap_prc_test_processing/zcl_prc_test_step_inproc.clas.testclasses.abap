@@ -256,14 +256,13 @@ CLASS ltc_rap_bo IMPLEMENTATION.
     DATA(bo_uuid) = ls_mapped-raperr[ 1 ]-UUID.
 
     " Processed object, not processed yet
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName         = zcl_prc_test_raperr_proc=>co_process_name
-                                                factoryClassName    = zcl_prc_test_raperr_proc=>co_class_name
-                                                processedObject     = zcl_prc_test_raperr_proc=>get_external_id( bo_uuid )
-                                                processedObjectUUID = bo_uuid
-                                                payloadJson         = zcl_prc_test_raperr_proc=>build_payload( i_scenario ) ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-no_execution ).
+    zcl_prc_processing_api=>get_instance( )->create( VALUE #(
+        ( processName         = zcl_prc_test_raperr_proc=>co_process_name
+          factoryClassName    = zcl_prc_test_raperr_proc=>co_class_name
+          processedObject     = zcl_prc_test_raperr_proc=>get_external_id( bo_uuid )
+          processedObjectUUID = bo_uuid
+          payloadJson         = zcl_prc_test_raperr_proc=>build_payload( i_scenario ) ) ) ).
+    COMMIT WORK.
 
     DATA(ext_id) = zcl_prc_test_raperr_proc=>get_external_id( bo_uuid ).
     SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS

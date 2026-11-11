@@ -92,16 +92,14 @@ CLASS zcl_prc_test_raperr_proc IMPLEMENTATION.
 
 
   METHOD start.
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #( ( processName         = co_process_name
-                                                factoryClassName    = co_class_name
-                                                processedObject     = get_external_id( i_bo_uuid )
-                                                processedObjectUUID = i_bo_uuid
-                                                payloadJson         = build_payload( i_scenario ) ) )
-        " Commit before processing: a ROLLBACK ENTITIES in the error case
-        " must not roll back the processed object itself
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-direct_execution ).
+    " Commits before processing: a ROLLBACK ENTITIES in the error case
+    " must not roll back the processed object itself
+    zcl_prc_processing_api=>get_instance( )->create_and_process(
+        VALUE #( ( processName         = co_process_name
+                   factoryClassName    = co_class_name
+                   processedObject     = get_external_id( i_bo_uuid )
+                   processedObjectUUID = i_bo_uuid
+                   payloadJson         = build_payload( i_scenario ) ) ) ).
   ENDMETHOD.
 
 

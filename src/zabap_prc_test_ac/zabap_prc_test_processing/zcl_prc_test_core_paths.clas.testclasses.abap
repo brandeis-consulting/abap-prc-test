@@ -214,17 +214,15 @@ CLASS ltc_notifications IMPLEMENTATION.
 
     " Notification object as the job creates it, but not processed yet
     DATA(uuid) = xco_cp=>uuid( )->value.
-    zcl_prc_processing_api=>get_instance( )->create_processed_objects(
-        i_create_processed_objects = VALUE #(
-            ( processName         = zcl_prc_notif_error_proc=>co_process_name
-              factoryClassName    = zcl_prc_notif_error_proc=>co_class_name
-              processedObject     = zcl_prc_notification=>object_id( |{ zcl_prc_test_proc_fixture=>co_process_name } / { co_mail }| )
-              processedObjectUUID = uuid
-              payloadJson         = zcl_prc_notification=>payload_to_json(
-                                        VALUE #( process_name = zcl_prc_test_proc_fixture=>co_process_name
-                                                 mail_address = co_mail ) ) ) )
-        i_perform_commit           = abap_true
-        i_trigger_processing       = zcl_prc_processing_api=>execution_mode-no_execution ).
+    zcl_prc_processing_api=>get_instance( )->create( VALUE #(
+        ( processName         = zcl_prc_notif_error_proc=>co_process_name
+          factoryClassName    = zcl_prc_notif_error_proc=>co_class_name
+          processedObject     = zcl_prc_notification=>object_id( |{ zcl_prc_test_proc_fixture=>co_process_name } / { co_mail }| )
+          processedObjectUUID = uuid
+          payloadJson         = zcl_prc_notification=>payload_to_json(
+                                    VALUE #( process_name = zcl_prc_test_proc_fixture=>co_process_name
+                                             mail_address = co_mail ) ) ) ) ).
+    COMMIT WORK.
 
     DATA(pattern) = |{ zcl_prc_test_proc_fixture=>co_process_name } /%|.
     SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS

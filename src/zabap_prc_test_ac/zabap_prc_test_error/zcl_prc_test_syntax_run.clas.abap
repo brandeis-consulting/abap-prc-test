@@ -59,15 +59,17 @@ CLASS zcl_prc_test_syntax_run IMPLEMENTATION.
         ELSE.
           DATA(uuid)   = xco_cp=>uuid( )->value.
           DATA(ext_id) = CONV zr_prc_processedobject-ExternalProcessedObjectID( |{ uuid }| ).
-          api->create_processed_objects(
-              i_create_processed_objects = VALUE #( ( processName         = co_process_name
-                                                      factoryClassName    = 'ZCL_PRC_TEST_SYNTAX_PROC'
-                                                      processedObject     = ext_id
-                                                      processedObjectUUID = uuid ) )
-              i_perform_commit           = abap_true
-              i_trigger_processing       = COND #( WHEN co_mode = `CREATE_ONLY`
-                                                   THEN zcl_prc_processing_api=>execution_mode-no_execution
-                                                   ELSE zcl_prc_processing_api=>execution_mode-direct_execution ) ).
+          DATA(objects_to_create) = VALUE zcl_prc_processing_api=>tt_create_processed_objects(
+                                        ( processName         = co_process_name
+                                          factoryClassName    = 'ZCL_PRC_TEST_SYNTAX_PROC'
+                                          processedObject     = ext_id
+                                          processedObjectUUID = uuid ) ).
+          IF co_mode = `CREATE_ONLY`.
+            api->create( objects_to_create ).
+            COMMIT WORK.
+          ELSE.
+            api->create_and_process( objects_to_create ).
+          ENDIF.
         ENDIF.
       CATCH cx_root INTO DATA(error).
         out->write( |Exception: { error->get_text( ) }| ).
