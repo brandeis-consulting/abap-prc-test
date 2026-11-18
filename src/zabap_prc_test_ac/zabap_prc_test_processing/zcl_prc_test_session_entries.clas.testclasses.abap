@@ -50,7 +50,10 @@ CLASS ltc_entries IMPLEMENTATION.
 
     TRY.
         CAST if_bgmc_op_single_tx_uncontr( NEW zcl_prc_bgpf(
-            VALUE #( ( selname = zcl_prc_retry_job=>s_uuid sign = 'I' option = 'EQ' low = fixture->uuid( `B1` ) ) ) )
+            VALUE #( ( selname = zcl_prc_retry_job=>co_parameter-uuid
+                       sign    = 'I'
+                       option  = 'EQ'
+                       low     = fixture->uuid( `B1` ) ) ) )
           )->execute( ).
       CATCH cx_root INTO DATA(error).
         cl_abap_unit_assert=>fail( msg = error->get_text( ) ).
@@ -90,7 +93,7 @@ CLASS lcl_plain_job IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_application_name.
-    rv_application_name = zif_prc_run=>co_application_names-demo_rate_adjustment.
+    r_application_name = zcl_prc_test_proc_fixture=>co_application_name.
   ENDMETHOD.
 
   METHOD notify_on_completion.

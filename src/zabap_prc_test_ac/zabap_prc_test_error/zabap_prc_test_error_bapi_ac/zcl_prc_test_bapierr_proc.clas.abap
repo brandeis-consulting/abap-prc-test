@@ -2,10 +2,6 @@
 "!
 "! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
 "! and tells the BAPI Z_PRC_TEST_BAPIERR how to behave.
-"! <p class="shorttext synchronized">PRC Test: Process for BAPI error scenarios</p>
-"!
-"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
-"! and tells the BAPI Z_PRC_TEST_BAPIERR how to behave.
 CLASS zcl_prc_test_bapierr_proc DEFINITION
   PUBLIC
   FINAL
@@ -35,7 +31,7 @@ CLASS zcl_prc_test_bapierr_proc DEFINITION
                  update_dump            TYPE ty_scenario VALUE `UPDATE_DUMP`,
                END OF scenario.
 
-    "! Creates the processed object and processes it synchronously (direct_execution).
+    "! Creates the processed object and processes it in this session (CREATE_AND_PROCESS).
     "!
     "! @parameter i_uuid     | UUID of the processed object
     "! @parameter i_scenario | Scenario, see constants SCENARIO
@@ -95,12 +91,13 @@ CLASS zcl_prc_test_bapierr_proc IMPLEMENTATION.
 
 
   METHOD get_scenario.
-    DATA ls_payload TYPE ty_payload.
+    DATA payload TYPE ty_payload.
     TRY.
-        xco_cp_json=>data->from_string( i_payload )->write_to( REF #( ls_payload ) ).
+        xco_cp_json=>data->from_string( i_payload )->write_to( REF #( payload ) ).
       CATCH cx_root ##CATCH_ALL ##NO_HANDLER.
+        " Invalid payload: the scenario stays empty and is passed to the BAPI as it is
     ENDTRY.
-    r_scenario = ls_payload-scenario.
+    r_scenario = payload-scenario.
   ENDMETHOD.
 
 ENDCLASS.

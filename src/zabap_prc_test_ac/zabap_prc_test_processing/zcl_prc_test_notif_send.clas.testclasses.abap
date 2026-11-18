@@ -33,7 +33,10 @@ CLASS ltc_send_step IMPLEMENTATION.
         objects = VALUE #( ( ref = 'SEND1' state = 'START' step_total = 3 mail = co_mail payload = `{"START":{"FAIL":"X"}}` ) ) ) ).
     fixture->run( ).
     NEW zcl_prc_error_mail_job( )->execute_synchronously(
-        VALUE #( ( selname = zcl_prc_error_mail_job=>c_process_name kind = 'S' sign = 'I' option = 'EQ'
+        VALUE #( ( selname = zcl_prc_error_mail_job=>co_parameter-process_name
+                   kind    = 'S'
+                   sign    = 'I'
+                   option  = 'EQ'
                    low     = zcl_prc_test_proc_fixture=>co_process_name ) ) ).
 
     DATA(pattern) = |{ zcl_prc_test_proc_fixture=>co_process_name } /%|.

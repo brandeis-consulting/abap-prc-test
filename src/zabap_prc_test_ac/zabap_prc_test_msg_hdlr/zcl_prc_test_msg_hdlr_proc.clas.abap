@@ -3,6 +3,9 @@
 "! Every state has exactly one transition to FINISHED. The transition calls the
 "! message handler API in a fixed way per start state (see lcl_transition), so
 "! each test starts in one state and checks exactly one way of using the API.
+"!
+"! FINDINGS has a second transition back to itself: the transition with
+"! findings (I_FAIL_STEP = ABAP_FALSE) proposes its start state.
 CLASS zcl_prc_test_msg_hdlr_proc DEFINITION
   PUBLIC
   FINAL
@@ -39,6 +42,9 @@ CLASS zcl_prc_test_msg_hdlr_proc DEFINITION
                  success_type_e           TYPE zprc_state VALUE 'SUCCESS_TYPE_E',
                  unexpected_t100_chain    TYPE zprc_state VALUE 'UNEXPECTED_T100_CHAIN',
                  default_success          TYPE zprc_state VALUE 'DEFAULT_SUCCESS',
+                 findings                 TYPE zprc_state VALUE 'FINDINGS',
+                 findings_wrong_end       TYPE zprc_state VALUE 'FINDINGS_WRONG_END',
+                 findings_then_failure    TYPE zprc_state VALUE 'FINDINGS_THEN_FAILURE',
                END OF state.
 
   PROTECTED SECTION.
@@ -55,6 +61,8 @@ CLASS zcl_prc_test_msg_hdlr_proc IMPLEMENTATION.
       ASSIGN COMPONENT ls_component-name OF STRUCTURE state TO FIELD-SYMBOL(<lv_state>).
       INSERT VALUE #( start_state = <lv_state> end_state = zif_prc_process~co_finished ) INTO TABLE r_transitions.
     ENDLOOP.
+    " Findings: back to the start state
+    INSERT VALUE #( start_state = state-findings end_state = state-findings ) INTO TABLE r_transitions.
   ENDMETHOD.
 
 

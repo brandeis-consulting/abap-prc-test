@@ -8,7 +8,7 @@ ENDCLASS.
 CLASS lhc_testbgpf IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " Testobjekt: alles erlaubt
+    " Test object: everything is allowed
     result = VALUE #( %create = if_abap_behv=>auth-allowed
                       %update = if_abap_behv=>auth-allowed
                       %delete = if_abap_behv=>auth-allowed ).
@@ -17,8 +17,8 @@ CLASS lhc_testbgpf IMPLEMENTATION.
 ENDCLASS.
 
 
-"! Saver: vergibt im Late-Numbering-Exit die finale ID und ruft
-"! anschliessend die Processing API im bgPF-Modus fuer die neuen Instanzen.
+"! Saver: assigns the final ID in the late numbering exit and then calls the
+"! processing API in bgPF mode for the new instances.
 CLASS lsc_zr_prc_test_bgpf DEFINITION INHERITING FROM cl_abap_behavior_saver.
   PROTECTED SECTION.
     METHODS adjust_numbers REDEFINITION.
@@ -30,23 +30,23 @@ CLASS lsc_zr_prc_test_bgpf IMPLEMENTATION.
   METHOD adjust_numbers.
     CHECK mapped-testbgpf IS NOT INITIAL.
 
-    " 1) Finale ID vergeben (fuer den Test reicht MAX + 1)
-    SELECT MAX( id ) FROM zprc_test_bgpf INTO @DATA(lv_max_id).
-    DATA(lv_next_id) = CONV int8( lv_max_id ).
+    " 1) Assign the final ID (MAX + 1 is enough for the test)
+    SELECT MAX( id ) FROM zprc_test_bgpf INTO @DATA(max_id).
+    DATA(next_id) = CONV int8( max_id ).
 
-    LOOP AT mapped-testbgpf ASSIGNING FIELD-SYMBOL(<ls_mapped>).
-      lv_next_id += 1.
-      <ls_mapped>-ID = lv_next_id.
+    LOOP AT mapped-testbgpf ASSIGNING FIELD-SYMBOL(<mapped>).
+      next_id += 1.
+      <mapped>-ID = next_id.
     ENDLOOP.
 
-    " 2) Processing Center im bgPF-Modus aufrufen - das ist der eigentliche Testgegenstand.
-    "    Kein Commit: in der Save-Sequenz verboten.
+    " 2) Call the processing API in bgPF mode - this is what the test is about.
+    "    No commit: not allowed in the save sequence.
     TRY.
         zcl_prc_processing_api=>get_instance( )->create_and_schedule_bgpf(
-            VALUE #( FOR ls_new IN mapped-testbgpf
+            VALUE #( FOR new IN mapped-testbgpf
                      ( processName      = zcl_prc_test_bgpf_proc=>co_process_name
                        factoryClassName = zcl_prc_test_bgpf_proc=>co_class_name
-                       processedObject  = ls_new-ID ) ) ).
+                       processedObject  = new-ID ) ) ).
       CATCH cx_bgmc.
         " The test waits for the processed object to be finished - without bgPF it fails there
     ENDTRY.

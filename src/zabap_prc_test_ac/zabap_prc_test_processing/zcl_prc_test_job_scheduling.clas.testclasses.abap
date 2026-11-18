@@ -110,7 +110,7 @@ CLASS ltc_run_app_save IMPLEMENTATION.
            ENTITY Run
            EXECUTE initiateRun
            FROM VALUE #( ( %cid   = 'INIT'
-                           %param = VALUE #( applicationName    = zif_prc_run=>co_application_names-demo_rate_adjustment
+                           %param = VALUE #( applicationName    = zcl_prc_test_proc_fixture=>co_application_name
                                              jobName            = co_job_name
                                              jobTemplateName    = co_template
                                              selectOptionString = `[]` ) ) )
@@ -222,10 +222,11 @@ CLASS ltc_api_job IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( act = lines( double->calls ) exp = 1 ).
     DATA(call) = double->calls[ 1 ].
-    cl_abap_unit_assert=>assert_equals( act = call-template exp = zcl_prc_retry_job=>c_apj_template_name
+    cl_abap_unit_assert=>assert_equals( act = call-template exp = zcl_prc_retry_job=>co_apj_template_name
                                         msg = 'The retry job processes the new objects' ).
-    DATA(s_uuid) = VALUE #( call-parameters[ name = zcl_prc_retry_job=>s_uuid ]-t_value[ 1 ]-low OPTIONAL ).
-    cl_abap_unit_assert=>assert_equals( act = CONV sysuuid_x16( s_uuid ) exp = uuid msg = 'Restricted to the new objects' ).
+    DATA(scheduled_uuid) = VALUE #( call-parameters[ name = zcl_prc_retry_job=>co_parameter-uuid ]-t_value[ 1 ]-low OPTIONAL ).
+    cl_abap_unit_assert=>assert_equals( act = CONV sysuuid_x16( scheduled_uuid ) exp = uuid
+                                        msg = 'Restricted to the new objects' ).
   ENDMETHOD.
 
 
@@ -301,8 +302,9 @@ CLASS ltc_api_bgpf IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_equals( act = lines( double->calls ) exp = 1 msg = 'One bgPF process' ).
     DATA(parameters) = double->calls[ 1 ].
-    DATA(s_uuid) = VALUE #( parameters[ selname = zcl_prc_retry_job=>s_uuid ]-low OPTIONAL ).
-    cl_abap_unit_assert=>assert_equals( act = CONV sysuuid_x16( s_uuid ) exp = uuid msg = 'Restricted to the new objects' ).
+    DATA(scheduled_uuid) = VALUE #( parameters[ selname = zcl_prc_retry_job=>co_parameter-uuid ]-low OPTIONAL ).
+    cl_abap_unit_assert=>assert_equals( act = CONV sysuuid_x16( scheduled_uuid ) exp = uuid
+                                        msg = 'Restricted to the new objects' ).
   ENDMETHOD.
 
 
@@ -337,6 +339,66 @@ CLASS ltc_api_bgpf IMPLEMENTATION.
         i_perform_commit           = abap_true
         i_trigger_processing       = zcl_prc_processing_api=>execution_mode-bgpf_execution ).
     cl_abap_unit_assert=>assert_equals( act = lcl_object=>read_state( ) exp = zif_prc_process=>co_start ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Resume of the processed object BO: the buffer of resumeProcessing is cleared by CLEANUP,
+"! so a rolled-back resume does not reach a later save in the same session
+CLASS ltc_resume_rollback DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+  PRIVATE SECTION.
+    DATA double TYPE REF TO lcl_bgpf_double.
+
+    METHODS setup.
+    METHODS teardown.
+    METHODS resume.
+    METHODS rolled_back_resume_once FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_resume_rollback IMPLEMENTATION.
+
+  METHOD setup.
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+    double = NEW #( ).
+    zcl_prc_bgpf_sched_injector=>inject( double ).
+    zcl_prc_processing_api=>get_instance( )->create( lcl_object=>to_create( ) ).
+    COMMIT WORK.
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    ROLLBACK ENTITIES.
+    zcl_prc_bgpf_sched_injector=>reset( ).
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+  ENDMETHOD.
+
+
+  METHOD resume.
+    MODIFY ENTITIES OF zr_prc_processedobjecttp PRIVILEGED
+           ENTITY ProcessedObject
+           EXECUTE resumeProcessing FROM VALUE #( ( %key-uuid = lcl_object=>read_uuid( ) ) )
+           FAILED DATA(failed).
+    cl_abap_unit_assert=>assert_initial( act = failed msg = 'Resume accepted' ).
+  ENDMETHOD.
+
+
+  METHOD rolled_back_resume_once.
+    " The second save changes the same object, so the filter on changed objects in
+    " SAVE_MODIFIED lets a left-over entry through - only CLEANUP prevents it
+    resume( ).
+    ROLLBACK ENTITIES.
+    resume( ).
+    COMMIT ENTITIES.
+
+    cl_abap_unit_assert=>assert_equals( act = lines( double->calls ) exp = 1 msg = 'One bgPF process' ).
+    DATA(scheduled) = REDUCE i( INIT count = 0
+                                FOR parameter IN double->calls[ 1 ]
+                                WHERE ( selname = zcl_prc_retry_job=>co_parameter-uuid )
+                                NEXT count = count + 1 ).
+    cl_abap_unit_assert=>assert_equals( act = scheduled exp = 1
+                                        msg = 'Scheduled once - nothing of the rolled-back resume' ).
   ENDMETHOD.
 
 ENDCLASS.

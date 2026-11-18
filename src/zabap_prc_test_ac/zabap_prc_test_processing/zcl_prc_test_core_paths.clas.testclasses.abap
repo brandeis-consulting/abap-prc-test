@@ -112,7 +112,7 @@ CLASS lcl_plain_job IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_application_name.
-    rv_application_name = zif_prc_run=>co_application_names-demo_rate_adjustment.
+    r_application_name = zcl_prc_test_proc_fixture=>co_application_name.
   ENDMETHOD.
 
   METHOD notify_on_completion.
@@ -147,7 +147,7 @@ CLASS ltc_continue_run IMPLEMENTATION.
   METHOD planned_run_is_continued.
     " As initiateRun leaves it: planned, application name set
     INSERT zprc_run FROM @( VALUE #( uuid             = mv_run_uuid
-                                     app_name         = zif_prc_run=>co_application_names-demo_rate_adjustment
+                                     app_name         = zcl_prc_test_proc_fixture=>co_application_name
                                      execution_status = zif_prc_run=>co_execution_status-planned ) ).
     COMMIT WORK.
 
@@ -251,12 +251,16 @@ CLASS ltc_notifications IMPLEMENTATION.
     DATA(job) = NEW zcl_prc_error_mail_job( ).
     job->if_apj_dt_exec_object~get_parameters( IMPORTING et_parameter_def = definitions
                                                          et_parameter_val = values ).
-    cl_abap_unit_assert=>assert_true( xsdbool( line_exists( definitions[ selname = zcl_prc_error_mail_job=>c_process_name ] ) ) ).
+    cl_abap_unit_assert=>assert_true(
+        xsdbool( line_exists( definitions[ selname = zcl_prc_error_mail_job=>co_parameter-process_name ] ) ) ).
 
     " Entry point of the application job: nothing with errors, nothing to do
     TRY.
         job->if_apj_rt_exec_object~execute(
-            VALUE #( ( selname = zcl_prc_error_mail_job=>c_process_name kind = 'S' sign = 'I' option = 'EQ'
+            VALUE #( ( selname = zcl_prc_error_mail_job=>co_parameter-process_name
+                       kind    = 'S'
+                       sign    = 'I'
+                       option  = 'EQ'
                        low     = zcl_prc_test_proc_fixture=>co_process_name ) ) ).
       CATCH cx_root INTO DATA(error).
         cl_abap_unit_assert=>fail( msg = error->get_text( ) ).

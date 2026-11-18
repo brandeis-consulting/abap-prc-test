@@ -1,7 +1,7 @@
-"! <p class="shorttext synchronized">PRC Test: Prozess START -> FINISHED (bgPF)</p>
+"! <p class="shorttext synchronized">PRC Test: Process START -> FINISHED (bgPF)</p>
 "!
-"! Minimaler Testprozess: eine einzige Transition von START nach FINISHED,
-"! die nichts tut ausser eine "performed"-Nachricht zu melden.
+"! Minimal test process: one single transition from START to FINISHED that does
+"! nothing but report a "performed" message.
 CLASS zcl_prc_test_bgpf_proc DEFINITION
   PUBLIC
   FINAL
@@ -13,7 +13,7 @@ CLASS zcl_prc_test_bgpf_proc DEFINITION
     ALIASES tt_transition FOR zif_prc_process~tt_transition.
 
     CONSTANTS co_class_name   TYPE zprc_process_impl_class VALUE 'ZCL_PRC_TEST_BGPF_PROC'.
-    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'PRC_TEST_BGPF_ADJ_NUM'.
+    CONSTANTS co_process_name TYPE zprc_process_name       VALUE 'TEST_BGPF_ADJ_NUM'.
 
   PROTECTED SECTION.
 

@@ -575,7 +575,7 @@ CLASS ltc_severity_rules IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         act = VALUE symsg( msgid = message-msgid msgno = message-msgno msgty = message-msgty msgv1 = message-msgv1 )
         exp = VALUE symsg( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'blank' ) ).
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_failed( ) ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -671,7 +671,7 @@ CLASS ltc_add_exception IMPLEMENTATION.
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ] exp = VALUE ty_header(
         msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'x1' message_text = 'Message x1' ) ).
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_failed( ) ).
   ENDMETHOD.
 
 
@@ -713,9 +713,10 @@ CLASS ltc_add_exception IMPLEMENTATION.
 
 
   METHOD dyn_msg_warning_does_not_fail.
-    " The severity of IF_T100_DYN_MSG is kept: a warning does not fail the handler
+    " The severity of IF_T100_DYN_MSG is kept: a warning does not fail the handler and is no error
     handler->add_exception( t100_exception( i_type = 'W' i_v1 = 'w' ) ).
 
+    cl_abap_unit_assert=>assert_false( handler->has_failed( ) ).
     cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ] exp = VALUE ty_header(
@@ -831,6 +832,195 @@ CLASS ltc_success_message IMPLEMENTATION.
                               msgv1 = 'ZPRC_TEST_MSG_HDLR' msgv2 = '002' msgv3 = 'E'
                               text = 'Program error: success message ZPRC_TEST_MSG_HDLR 002 has type E (allowed: S, I, W)' severity_code = 1 )
                             ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' text = 'Message w' severity_code = 2 ) ) ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! Findings (I_FAIL_STEP = ABAP_FALSE) end-to-end, read from the persistence.
+"! A transition with findings ends in its start state (X -> X): the step is
+"! committed, the last error is the header - never the failure message of the
+"! transition, findings are no failure - and the object gets retry data like
+"! an erroneous one.
+CLASS ltc_findings DEFINITION INHERITING FROM ltc_base FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS findings_ignore_failure_msg FOR TESTING.
+    METHODS findings_need_start_state   FOR TESTING.
+    METHODS failure_after_finding       FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_findings IMPLEMENTATION.
+
+  METHOD findings_ignore_failure_msg.
+    " W, finding e1 (SY), finding e2 (BAPI), back to FINDINGS. GET_FAILURE_MESSAGE declares 003:
+    " the last finding is the header and 003 is not among the messages
+    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'FINDINGS' step_total = 1 ) ) ) ).
+
+    fixture->run( ).
+
+    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
+        objects  = VALUE #( ( ref = 'O1' state = 'FINDINGS' step_total = 1 latest_step = 'S1' retry_count = 1 retry = '+300'
+                              changed = 'CHANGED' etag = 'CHANGED' ) )
+        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'FINDINGS' end_state = 'FINDINGS'
+                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' text = 'Message e2' severity_code = 1 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e1' text = 'Message e1' severity_code = 1 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' text = 'Message e2' severity_code = 1 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'W' msgv1 = 'w' text = 'Message w' severity_code = 2 ) ) ) ).
+  ENDMETHOD.
+
+
+  METHOD findings_need_start_state.
+    " A finding, but the transition goes on to FINISHED: program error 024, the step fails and is rolled back
+    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'FINDINGS_WRONG_END' step_total = 1 ) ) ) ).
+
+    fixture->run( ).
+
+    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
+        objects  = VALUE #( ( ref = 'O1' state = 'FINDINGS_WRONG_END' step_total = 1 latest_step = 'S1' retry_count = 1 retry = '+300'
+                              changed = 'CHANGED' etag = 'CHANGED' ) )
+        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'FINDINGS_WRONG_END' end_state = 'FINDINGS_WRONG_END'
+                              msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '024' msgty = 'E' msgv1 = 'FINDINGS_WRONG_END' msgv2 = 'FINISHED'
+                              text = 'Transition FINDINGS_WRONG_END -> FINISHED ends with findings; only FINDINGS_WRONG_END -> FINDINGS_WRONG_END is allowed'
+                              severity_code = 1 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '024' msgty = 'E' msgv1 = 'FINDINGS_WRONG_END' msgv2 = 'FINISHED'
+                              text = 'Transition FINDINGS_WRONG_END -> FINISHED ends with findings; only FINDINGS_WRONG_END -> FINDINGS_WRONG_END is allowed'
+                              severity_code = 1 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' text = 'Message e' severity_code = 1 ) ) ) ).
+  ENDMETHOD.
+
+
+  METHOD failure_after_finding.
+    " A finding, then a real error: the step fails as usual (rollback), the finding is kept as detail
+    fixture->insert_given( VALUE #( objects = VALUE #( ( ref = 'O1' state = 'FINDINGS_THEN_FAILURE' step_total = 1 ) ) ) ).
+
+    fixture->run( ).
+
+    cl_abap_unit_assert=>assert_equals( act = fixture->read_actual( ) exp = VALUE ty_data(
+        objects  = VALUE #( ( ref = 'O1' state = 'FINDINGS_THEN_FAILURE' step_total = 1 latest_step = 'S1' retry_count = 1 retry = '+300'
+                              changed = 'CHANGED' etag = 'CHANGED' ) )
+        steps    = VALUE #( ( object = 'O1' ref = 'S1' seq = 1 start_state = 'FINDINGS_THEN_FAILURE' end_state = 'FINDINGS_THEN_FAILURE'
+                              msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' text = 'Message e2' severity_code = 1 ) )
+        messages = VALUE #( ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e1' text = 'Message e1' severity_code = 1 )
+                            ( object = 'O1' step = 'S1' msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' text = 'Message e2' severity_code = 1 ) ) ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+"! I_FAIL_STEP = ABAP_FALSE on every ADD method of the handler API directly (no
+"! processing, no persistence): the error is recorded, nothing is raised and
+"! HAS_ERRORS stays ABAP_FALSE.
+CLASS ltc_findings_api DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    " Non-initial FAILED response without any message (failure signal only)
+    TYPES: BEGIN OF ty_failed_only,
+             failed TYPE abap_bool,
+           END OF ty_failed_only.
+
+    DATA handler TYPE REF TO zif_prc_message_handler.
+
+    METHODS setup.
+
+    "! Asserts no failure and the message key of the last message
+    METHODS assert_finding IMPORTING i_exp TYPE symsg.
+
+    METHODS from_sy                 FOR TESTING RAISING cx_static_check.
+    METHODS from_text               FOR TESTING RAISING cx_static_check.
+    METHODS bapi_result             FOR TESTING RAISING cx_static_check.
+    METHODS exception               FOR TESTING RAISING cx_static_check.
+    METHODS eml_failed_gets_002     FOR TESTING RAISING cx_static_check.
+    METHODS header_is_last_finding  FOR TESTING RAISING cx_static_check.
+ENDCLASS.
+
+
+CLASS ltc_findings_api IMPLEMENTATION.
+
+  METHOD setup.
+    handler = zcl_prc_msg_handler_for_test=>create( ).
+  ENDMETHOD.
+
+
+  METHOD assert_finding.
+    " A finding is an error, but no failure
+    cl_abap_unit_assert=>assert_false( act = handler->has_failed( )
+                                       msg = 'A finding does not fail the step' ).
+    cl_abap_unit_assert=>assert_true( act = handler->has_errors( )
+                                      msg = 'A finding is an error' ).
+    DATA(messages) = handler->get_messages( ).
+    DATA(last) = messages[ lines( messages ) ].
+    cl_abap_unit_assert=>assert_equals(
+        act = VALUE symsg( msgid = last-msgid msgno = last-msgno msgty = last-msgty msgv1 = last-msgv1 )
+        exp = i_exp ).
+  ENDMETHOD.
+
+
+  METHOD from_sy.
+    MESSAGE e001(zprc_test_msg_hdlr) WITH 'e' INTO DATA(lv_dummy) ##NEEDED.
+    handler->add_message_from_sy( i_fail_step = abap_false ).
+
+    assert_finding( VALUE #( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' ) ).
+  ENDMETHOD.
+
+
+  METHOD from_text.
+    handler->add_message_from_text( i_message_text     = `Text e`
+                                    i_message_severity = 'E'
+                                    i_fail_step        = abap_false ).
+
+    assert_finding( VALUE #( msgid = 'SY' msgno = '499' msgty = 'E' msgv1 = 'Text e' ) ).
+  ENDMETHOD.
+
+
+  METHOD bapi_result.
+    handler->add_bapi_result( i_bapiret   = VALUE #( ( type = 'E' id = 'ZPRC_TEST_MSG_HDLR' number = '001' message_v1 = 'e' ) )
+                              i_fail_step = abap_false ).
+
+    assert_finding( VALUE #( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' ) ).
+  ENDMETHOD.
+
+
+  METHOD exception.
+    TRY.
+        RAISE EXCEPTION TYPE lcx_dyn MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE 'E' NUMBER '001' WITH 'e'.
+      CATCH lcx_dyn INTO DATA(error).
+    ENDTRY.
+
+    handler->add_exception( i_exception = error
+                            i_fail_step = abap_false ).
+
+    assert_finding( VALUE #( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e' ) ).
+  ENDMETHOD.
+
+
+  METHOD eml_failed_gets_002.
+    " FAILED without any message: the finding still needs an error - ZPRC_PROCESS_MESSAGE/002
+    handler->add_eml_modify_result( i_failed    = VALUE ty_failed_only( failed = abap_true )
+                                    i_fail_step = abap_false ).
+
+    assert_finding( VALUE #( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '002' msgty = 'E' ) ).
+  ENDMETHOD.
+
+
+  METHOD header_is_last_finding.
+    " FOR_FINDINGS: the last error is the header, nothing is added to the handler
+    MESSAGE e001(zprc_test_msg_hdlr) WITH 'e1' INTO DATA(lv_dummy) ##NEEDED.
+    handler->add_message_from_sy( i_fail_step = abap_false ).
+    MESSAGE e001(zprc_test_msg_hdlr) WITH 'e2' INTO lv_dummy.
+    handler->add_message_from_sy( i_fail_step = abap_false ).
+    MESSAGE w001(zprc_test_msg_hdlr) WITH 'w' INTO lv_dummy.
+    handler->add_message_from_sy( ).
+
+    DATA(header) = zcl_prc_step_header=>for_findings( handler ).
+
+    cl_abap_unit_assert=>assert_equals(
+        act = VALUE symsg( msgid = header-msgid msgno = header-msgno msgty = header-msgty msgv1 = header-msgv1 )
+        exp = VALUE symsg( msgid = 'ZPRC_TEST_MSG_HDLR' msgno = '001' msgty = 'E' msgv1 = 'e2' ) ).
+    cl_abap_unit_assert=>assert_equals( act = lines( handler->get_messages( ) ) exp = 3 ).
   ENDMETHOD.
 
 ENDCLASS.

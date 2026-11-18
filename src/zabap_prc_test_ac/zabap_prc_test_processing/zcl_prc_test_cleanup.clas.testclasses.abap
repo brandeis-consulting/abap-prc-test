@@ -73,7 +73,7 @@ CLASS ltc_cleanup IMPLEMENTATION.
   METHOD run.
     r_uuid = xco_cp=>uuid( )->value.
     INSERT zprc_run FROM @( VALUE #( uuid             = r_uuid
-                                     app_name         = zif_prc_run=>co_application_names-demo_rate_adjustment
+                                     app_name         = zcl_prc_test_proc_fixture=>co_application_name
                                      execution_status = i_status
                                      job_end          = i_job_end ) ).
     LOOP AT i_objects INTO DATA(ref).

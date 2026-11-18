@@ -84,7 +84,10 @@ CLASS ltc_retry_job IMPLEMENTATION.
 
     TRY.
         NEW zcl_prc_retry_job( )->if_apj_rt_exec_object~execute(
-            VALUE #( ( selname = zcl_prc_retry_job=>c_process_name kind = 'S' sign = 'I' option = 'EQ'
+            VALUE #( ( selname = zcl_prc_retry_job=>co_parameter-process_name
+                       kind    = 'S'
+                       sign    = 'I'
+                       option  = 'EQ'
                        low     = zcl_prc_test_proc_fixture=>co_process_name ) ) ).
       CATCH cx_root INTO DATA(error).
         cl_abap_unit_assert=>fail( msg = error->get_text( ) ).
@@ -128,7 +131,7 @@ CLASS lcl_notifying_job IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_application_name.
-    rv_application_name = zif_prc_run=>co_application_names-demo_rate_adjustment.
+    r_application_name = zcl_prc_test_proc_fixture=>co_application_name.
   ENDMETHOD.
   " NOTIFY_ON_COMPLETION is not redefined: the default notifies
 ENDCLASS.

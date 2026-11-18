@@ -2,10 +2,6 @@
 "! One transition START -> FINISHED whose handler does nothing: measures the cost of
 "! the framework alone (selection, packages, isolated step, writes, log, events).
 "! Used by ZCL_PRC_TEST_PERF_RUN.
-"! <p class="shorttext synchronized">PRC Test: Process without logic (performance)</p>
-"! One transition START -> FINISHED whose handler does nothing: measures the cost of
-"! the framework alone (selection, packages, isolated step, writes, log, events).
-"! Used by ZCL_PRC_TEST_PERF_RUN.
 CLASS zcl_prc_test_perf_proc DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     INTERFACES zif_prc_process.
@@ -35,4 +31,3 @@ CLASS zcl_prc_test_perf_proc IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
-

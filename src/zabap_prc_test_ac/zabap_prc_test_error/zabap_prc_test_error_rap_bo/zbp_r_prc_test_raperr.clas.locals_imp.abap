@@ -1,5 +1,7 @@
-"! Buffer shared by handler and saver: remembers for which instance messages
-"! have to be raised in the check_before_save phase or in save_modified.
+"! Work for the save, collected by the actions: for which instance messages have
+"! to be raised in the check_before_save phase or in save_modified.
+"! Cleared by the saver's CLEANUP - after every save and after ROLLBACK ENTITIES,
+"! so nothing of a rolled-back LUW reaches a later save in the same session.
 CLASS lcl_buffer DEFINITION FINAL.
   PUBLIC SECTION.
     CONSTANTS co_msgid TYPE symsgid VALUE 'ZPRC_TEST_RAPERR'.
@@ -18,11 +20,18 @@ CLASS lcl_buffer DEFINITION FINAL.
            tt_messages TYPE STANDARD TABLE OF REF TO if_abap_behv_message WITH EMPTY KEY,
            tt_uuid     TYPE STANDARD TABLE OF sysuuid_x16 WITH EMPTY KEY.
 
-    CLASS-DATA mt_todo TYPE tt_todo.
+    "! Instance and phase of the scenario actions checkBeforeSaveError,
+    "! lateSaveMessages and lateSaveFailed
+    CLASS-DATA todo TYPE tt_todo.
+
+    CLASS-METHODS clear.
 ENDCLASS.
 
 
 CLASS lcl_buffer IMPLEMENTATION.
+  METHOD clear.
+    CLEAR todo.
+  ENDMETHOD.
 ENDCLASS.
 
 
@@ -118,7 +127,7 @@ CLASS lhc_raperr IMPLEMENTATION.
 
     LOOP AT keys INTO DATA(ls_key).
       INSERT VALUE #( uuid  = ls_key-UUID
-                      phase = lcl_buffer=>phase-check_before_save ) INTO TABLE lcl_buffer=>mt_todo.
+                      phase = lcl_buffer=>phase-check_before_save ) INTO TABLE lcl_buffer=>todo.
     ENDLOOP.
   ENDMETHOD.
 
@@ -145,7 +154,7 @@ CLASS lhc_raperr IMPLEMENTATION.
 
     LOOP AT i_uuids INTO DATA(lv_uuid).
       INSERT VALUE #( uuid  = lv_uuid
-                      phase = i_phase ) INTO TABLE lcl_buffer=>mt_todo.
+                      phase = i_phase ) INTO TABLE lcl_buffer=>todo.
     ENDLOOP.
   ENDMETHOD.
 
@@ -155,8 +164,8 @@ CLASS lhc_raperr IMPLEMENTATION.
     DATA(lt_messages) = build_messages( i_first_number = '007'
                                         i_with_errors  = abap_true ).
     LOOP AT keys INTO DATA(ls_key).
-      CHECK line_exists( lcl_buffer=>mt_todo[ uuid  = ls_key-UUID
-                                              phase = lcl_buffer=>phase-check_before_save ] ).
+      CHECK line_exists( lcl_buffer=>todo[ uuid  = ls_key-UUID
+                                           phase = lcl_buffer=>phase-check_before_save ] ).
       APPEND VALUE #( %tky = ls_key-%tky ) TO failed-raperr.
       LOOP AT lt_messages INTO DATA(lo_message).
         APPEND VALUE #( %tky = ls_key-%tky  %msg = lo_message ) TO reported-raperr.
@@ -196,6 +205,7 @@ ENDCLASS.
 CLASS lsc_zr_prc_test_raperr DEFINITION INHERITING FROM cl_abap_behavior_saver_failed.
   PROTECTED SECTION.
     METHODS save_modified REDEFINITION.
+    METHODS cleanup       REDEFINITION.
 
   PRIVATE SECTION.
     "! Creates E, E, W, I starting with number i_first_number.
@@ -213,21 +223,24 @@ CLASS lsc_zr_prc_test_raperr IMPLEMENTATION.
     DATA(lt_messages) = build_messages( '011' ).
 
     LOOP AT update-raperr INTO DATA(ls_update).
-      IF line_exists( lcl_buffer=>mt_todo[ uuid  = ls_update-UUID
-                                           phase = lcl_buffer=>phase-late_save_failed ] ).
+      IF line_exists( lcl_buffer=>todo[ uuid  = ls_update-UUID
+                                        phase = lcl_buffer=>phase-late_save_failed ] ).
         APPEND VALUE #( UUID        = ls_update-UUID
                         %fail-cause = if_abap_behv=>cause-unspecific ) TO failed-raperr.
-      ELSEIF NOT line_exists( lcl_buffer=>mt_todo[ uuid  = ls_update-UUID
-                                                   phase = lcl_buffer=>phase-late_save_messages ] ).
+      ELSEIF NOT line_exists( lcl_buffer=>todo[ uuid  = ls_update-UUID
+                                                phase = lcl_buffer=>phase-late_save_messages ] ).
         CONTINUE.
       ENDIF.
       LOOP AT lt_messages INTO DATA(lo_message).
         APPEND VALUE #( UUID = ls_update-UUID  %msg = lo_message ) TO reported-raperr.
       ENDLOOP.
     ENDLOOP.
+  ENDMETHOD.
 
-    " cleanup cannot be redefined in a managed BO - so the buffer is cleared here
-    CLEAR lcl_buffer=>mt_todo.
+
+  METHOD cleanup.
+    " After every save and after ROLLBACK ENTITIES (BDEF: and cleanup)
+    lcl_buffer=>clear( ).
   ENDMETHOD.
 
 

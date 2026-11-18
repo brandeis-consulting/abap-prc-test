@@ -16,42 +16,6 @@
 "! <li>Admin fields: '' = unchanged / set correctly, 'CHANGED', 'MODIFIED',
 "!     'MISSING' or 'INVALID'</li>
 "! </ul>
-"! <p class="shorttext synchronized">PRC Test: Fixture for processing tests</p>
-"!
-"! Pure mechanics, no expectations: delete own data, insert the given state
-"! directly into the PRC tables, trigger the processing and read the actual
-"! state completely.
-"!
-"! Given and actual use the same structure (TY_DATA), so a test compares the
-"! complete actual state with one ASSERT_EQUALS. Only non-deterministic values
-"! are mapped to stable ones:
-"! <ul>
-"! <li>UUIDs: references - objects by external ID (O1), steps per object in
-"!     creation order (S1, S2, ...), runs by the given reference (R1)</li>
-"! <li>Timestamps (retry, not before): seconds relative to the start of the run,
-"!     rounded to full minutes ('+300', '-60'); initial = ''</li>
-"! <li>Process name and factory class of the fixture (constructor): ''</li>
-"! <li>Admin fields: '' = unchanged / set correctly, 'CHANGED', 'MODIFIED',
-"!     'MISSING' or 'INVALID'</li>
-"! </ul>
-"! <p class="shorttext synchronized">PRC Test: Fixture for processing tests</p>
-"!
-"! Pure mechanics, no expectations: delete own data, insert the given state
-"! directly into the PRC tables, trigger the processing and read the actual
-"! state completely.
-"!
-"! Given and actual use the same structure (TY_DATA), so a test compares the
-"! complete actual state with one ASSERT_EQUALS. Only non-deterministic values
-"! are mapped to stable ones:
-"! <ul>
-"! <li>UUIDs: references - objects by external ID (O1), steps per object in
-"!     creation order (S1, S2, ...), runs by the given reference (R1)</li>
-"! <li>Timestamps (retry, not before): seconds relative to the start of the run,
-"!     rounded to full minutes ('+300', '-60'); initial = ''</li>
-"! <li>Process name and factory class of the fixture (constructor): ''</li>
-"! <li>Admin fields: '' = unchanged / set correctly, 'CHANGED', 'MODIFIED',
-"!     'MISSING' or 'INVALID'</li>
-"! </ul>
 "! Test processes start with TEST_, demo processes with DEMO_ (not productive).
 CLASS zcl_prc_test_proc_fixture DEFINITION
   PUBLIC
@@ -63,6 +27,8 @@ CLASS zcl_prc_test_proc_fixture DEFINITION
     CONSTANTS co_process_name       TYPE zprc_process_name       VALUE 'TEST_PROC'.
     CONSTANTS co_other_process_name TYPE zprc_process_name       VALUE 'TEST_PROC_OTHER'.
     CONSTANTS co_factory            TYPE zprc_process_impl_class VALUE 'ZCL_PRC_TEST_PROC_PROCESS'.
+    "! Application of the runs of the tests (ZPRC_RUN-ZPRCRUNAPP); independent of the demo
+    CONSTANTS co_application_name   TYPE zprc_run_app_name       VALUE 'TEST_RUN'.
 
     TYPES: BEGIN OF ty_object,
              ref          TYPE string,
@@ -414,30 +380,30 @@ CLASS zcl_prc_test_proc_fixture IMPLEMENTATION.
 
 
   METHOD run.
-    DATA lt_parameters TYPE if_apj_rt_exec_object=>tt_templ_val.
+    DATA parameters TYPE if_apj_rt_exec_object=>tt_templ_val.
 
-    LOOP AT mt_objects INTO DATA(ls_object).
-      APPEND VALUE #( selname = zcl_prc_retry_job=>s_uuid
+    LOOP AT mt_objects INTO DATA(object).
+      APPEND VALUE #( selname = zcl_prc_retry_job=>co_parameter-uuid
                       kind    = 'S'
                       sign    = 'I'
                       option  = 'EQ'
-                      low     = ls_object-low ) TO lt_parameters.
+                      low     = object-low ) TO parameters.
     ENDLOOP.
     IF i_process_name IS NOT INITIAL.
-      APPEND VALUE #( selname = zcl_prc_retry_job=>c_process_name
+      APPEND VALUE #( selname = zcl_prc_retry_job=>co_parameter-process_name
                       kind    = 'S'
                       sign    = 'I'
                       option  = 'EQ'
-                      low     = i_process_name ) TO lt_parameters.
+                      low     = i_process_name ) TO parameters.
     ENDIF.
     IF i_ignore_restart = abap_true.
-      APPEND VALUE #( selname = zcl_prc_retry_job=>p_ignore_restart
+      APPEND VALUE #( selname = zcl_prc_retry_job=>co_parameter-ignore_restart
                       kind    = 'P'
-                      low     = abap_true ) TO lt_parameters.
+                      low     = abap_true ) TO parameters.
     ENDIF.
 
     GET TIME STAMP FIELD mv_run_at.
-    zcl_prc_processing_api=>get_instance( )->process_synchronously( lt_parameters ).
+    zcl_prc_processing_api=>get_instance( )->process_synchronously( parameters ).
   ENDMETHOD.
 
 

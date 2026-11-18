@@ -155,3 +155,99 @@ CLASS ltc_message_group IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+
+"! Changed event of a message group: the buffer of triggerChangedEvent is cleared by
+"! CLEANUP, so nothing of a rolled-back LUW reaches the next save in the same session
+CLASS ltc_message_event DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION MEDIUM.
+
+  PRIVATE SECTION.
+    CLASS-DATA environment TYPE REF TO if_rap_event_test_environment.
+    DATA group TYPE STRUCTURE FOR KEY OF zr_prc_messagetp.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+    METHODS setup.
+    METHODS teardown.
+
+    METHODS trigger_event.
+    METHODS raised_count RETURNING VALUE(r_count) TYPE i.
+
+    METHODS group_event_once FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_message_event IMPLEMENTATION.
+
+  METHOD class_setup.
+    environment = cl_rap_event_test_environment=>create(
+        VALUE #( ( entity_name = 'ZR_PRC_MESSAGETP' event_name = 'ZZ_MESSAGECHANGED' ) ) ).
+  ENDMETHOD.
+
+
+  METHOD class_teardown.
+    environment->destroy( ).
+  ENDMETHOD.
+
+
+  METHOD setup.
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+    DATA(fixture) = NEW zcl_prc_test_proc_fixture( ).
+    fixture->insert_given( VALUE #(
+        objects = VALUE #( ( ref = 'O1' state = 'START' step_total = 3 payload = `{"START":{"FAIL":"X"}}` ) ) ) ).
+    fixture->run( ).
+
+    SELECT SINGLE * FROM zr_prc_messagetp WITH PRIVILEGED ACCESS
+      WHERE ProcessName = @zcl_prc_test_proc_fixture=>co_process_name
+      INTO @DATA(row).
+    group = CORRESPONDING #( row ).
+    " The processing raised events of its own - collect only the events of the test
+    environment->clear( ).
+  ENDMETHOD.
+
+
+  METHOD teardown.
+    ROLLBACK ENTITIES.
+    zcl_prc_test_proc_fixture=>delete_own_data( ).
+  ENDMETHOD.
+
+
+  METHOD trigger_event.
+    MODIFY ENTITIES OF zr_prc_messagetp
+           ENTITY Message
+           EXECUTE triggerChangedEvent FROM VALUE #( ( %key = group ) )
+           FAILED DATA(failed).
+    cl_abap_unit_assert=>assert_initial( act = failed msg = 'Event triggered' ).
+  ENDMETHOD.
+
+
+  METHOD raised_count.
+    FIELD-SYMBOLS <payload> TYPE ANY TABLE.
+
+    DATA(double) = environment->get_event( entity_name = 'ZR_PRC_MESSAGETP' event_name = 'ZZ_MESSAGECHANGED' ).
+    IF double IS NOT BOUND.
+      RETURN.
+    ENDIF.
+    DATA(payload) = double->get_payload( ).
+    IF payload IS NOT BOUND.
+      RETURN.
+    ENDIF.
+    ASSIGN payload->* TO <payload>.
+    IF sy-subrc = 0.
+      r_count = lines( <payload> ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD group_event_once.
+    trigger_event( ).
+    ROLLBACK ENTITIES.
+    trigger_event( ).
+    COMMIT ENTITIES.
+
+    cl_abap_unit_assert=>assert_equals( act = raised_count( ) exp = 1
+                                        msg = 'One event - nothing of the rolled-back LUW' ).
+  ENDMETHOD.
+
+ENDCLASS.

@@ -58,7 +58,6 @@ ENDCLASS.
 CLASS ltc_base IMPLEMENTATION.
 
   METHOD setup.
-*    delete_previous_results( ).
     TRY.
         mv_uuid = cl_system_uuid=>create_uuid_x16_static( ).
       CATCH cx_uuid_error INTO DATA(lx_uuid).
@@ -342,27 +341,40 @@ CLASS ltc_call_dump IMPLEMENTATION.
 
   METHOD call_dump.
     " MESSAGE X dumps the isolated session: the messages of that session are
-    " lost, the step carries the program error as header, the abort text and
-    " the short dump, found by the EPP identity of the session, as information
+    " lost, the step carries the runtime error and its cause (the text of the
+    " MESSAGE X) as header, the short dump, found by the EPP identity of the
+    " session, and its error analysis as information
     run_prc( ).
     assert_state( zif_prc_process=>co_start ).
-    assert_messages( VALUE #( ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '011' msgty = 'I' )
-                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '013' msgty = 'I' )
+    assert_messages( VALUE #( ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '013' msgty = 'I' )
                               ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '014' msgty = 'I' )
-                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '018' msgty = 'E' ) ) ).
+                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '025' msgty = 'E' ) ) ).
 
     " The dump of this step, not of another one
-    DATA(lv_ext_id) = zcl_prc_test_bapierr_proc=>get_external_id( mv_uuid ).
-    SELECT SINGLE FROM zr_prc_processedmessage AS msg
+    DATA(ext_id) = zcl_prc_test_bapierr_proc=>get_external_id( mv_uuid ).
+    SELECT SINGLE msg~MessageText
+      FROM zr_prc_processedmessage AS msg
            INNER JOIN zr_prc_processedobject AS obj ON msg~ProcessedObjectUUID = obj~UUID
-      FIELDS msg~MessageText
       WHERE obj~ProcessName               = @zcl_prc_test_bapierr_proc=>co_process_name
-        AND obj~ExternalProcessedObjectID = @lv_ext_id
+        AND obj~ExternalProcessedObjectID = @ext_id
         AND msg~MessageClass              = 'ZPRC_PROCESS_MESSAGE'
         AND msg~MessageNumber             = '014'
-      INTO @DATA(lv_analysis)
+      INTO @DATA(analysis)
       PRIVILEGED ACCESS.
-    cl_abap_unit_assert=>assert_char_cp( act = lv_analysis exp = '*CALL_DUMP*' msg = 'Short dump of another step' ).
+    cl_abap_unit_assert=>assert_char_cp( act = analysis exp = '*CALL_DUMP*' msg = 'Short dump of another step' ).
+
+    " The header names the runtime error and the cause - not a generic "program error"
+    SELECT SINGLE msg~MessageText
+      FROM zr_prc_processedmessage AS msg
+           INNER JOIN zr_prc_processedobject AS obj ON msg~ProcessedObjectUUID = obj~UUID
+      WHERE obj~ProcessName               = @zcl_prc_test_bapierr_proc=>co_process_name
+        AND obj~ExternalProcessedObjectID = @ext_id
+        AND msg~MessageClass              = 'ZPRC_PROCESS_MESSAGE'
+        AND msg~MessageNumber             = '025'
+      INTO @DATA(header)
+      PRIVILEGED ACCESS.
+    cl_abap_unit_assert=>assert_char_cp( act = header exp = '*MESSAGE_TYPE_X*' msg = 'Header without runtime error' ).
+    cl_abap_unit_assert=>assert_char_cp( act = header exp = '*CALL_DUMP*'      msg = 'Header without the cause' ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -433,27 +445,39 @@ CLASS ltc_update_dump IMPLEMENTATION.
 
   METHOD update_dump.
     " MESSAGE X in the local update task dumps the isolated session: the W and I
-    " of the BAPI are lost, the step carries the program error as header, the
-    " abort text ("connection closed") and the short dump, found by the EPP
-    " identity of the session, as information
+    " of the BAPI are lost, the step carries the runtime error and its cause (the
+    " text of the MESSAGE X) as header, the short dump, found by the EPP identity
+    " of the session, and its error analysis as information
     run_prc( ).
     assert_state( zif_prc_process=>co_start ).
-    assert_messages( VALUE #( ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '011' msgty = 'I' )
-                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '013' msgty = 'I' )
+    assert_messages( VALUE #( ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '013' msgty = 'I' )
                               ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '014' msgty = 'I' )
-                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '018' msgty = 'E' ) ) ).
+                              ( msgid = 'ZPRC_PROCESS_MESSAGE' msgno = '025' msgty = 'E' ) ) ).
 
     " The dump of this step, not of another one
-    DATA(lv_ext_id) = zcl_prc_test_bapierr_proc=>get_external_id( mv_uuid ).
-    SELECT SINGLE FROM zr_prc_processedmessage AS msg
+    DATA(ext_id) = zcl_prc_test_bapierr_proc=>get_external_id( mv_uuid ).
+    SELECT SINGLE msg~MessageText
+      FROM zr_prc_processedmessage AS msg
            INNER JOIN zr_prc_processedobject AS obj ON msg~ProcessedObjectUUID = obj~UUID
-      FIELDS msg~MessageText
       WHERE obj~ProcessName               = @zcl_prc_test_bapierr_proc=>co_process_name
-        AND obj~ExternalProcessedObjectID = @lv_ext_id
+        AND obj~ExternalProcessedObjectID = @ext_id
         AND msg~MessageClass              = 'ZPRC_PROCESS_MESSAGE'
         AND msg~MessageNumber             = '014'
-      INTO @DATA(lv_analysis)
+      INTO @DATA(analysis)
       PRIVILEGED ACCESS.
-    cl_abap_unit_assert=>assert_char_cp( act = lv_analysis exp = '*UPDATE_DUMP*' msg = 'Short dump of another step' ).
+    cl_abap_unit_assert=>assert_char_cp( act = analysis exp = '*UPDATE_DUMP*' msg = 'Short dump of another step' ).
+
+    " The header names the runtime error and the cause - not a generic "program error"
+    SELECT SINGLE msg~MessageText
+      FROM zr_prc_processedmessage AS msg
+           INNER JOIN zr_prc_processedobject AS obj ON msg~ProcessedObjectUUID = obj~UUID
+      WHERE obj~ProcessName               = @zcl_prc_test_bapierr_proc=>co_process_name
+        AND obj~ExternalProcessedObjectID = @ext_id
+        AND msg~MessageClass              = 'ZPRC_PROCESS_MESSAGE'
+        AND msg~MessageNumber             = '025'
+      INTO @DATA(header)
+      PRIVILEGED ACCESS.
+    cl_abap_unit_assert=>assert_char_cp( act = header exp = '*MESSAGE_TYPE_X*' msg = 'Header without runtime error' ).
+    cl_abap_unit_assert=>assert_char_cp( act = header exp = '*UPDATE_DUMP*'    msg = 'Header without the cause' ).
   ENDMETHOD.
 ENDCLASS.

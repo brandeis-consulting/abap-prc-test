@@ -39,7 +39,7 @@ CLASS lcl_test_job IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_application_name.
-    rv_application_name = zif_prc_run=>co_application_names-demo_rate_adjustment.
+    r_application_name = zcl_prc_test_proc_fixture=>co_application_name.
   ENDMETHOD.
 
   METHOD notify_on_completion.
@@ -83,8 +83,8 @@ CLASS ltc_run_job IMPLEMENTATION.
         NEW lcl_test_job( )->if_apj_rt_exec_object~execute(
             VALUE #( ( selname = lcl_test_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'RUNJOB1' )
                      ( selname = lcl_test_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'RUNJOB2' ) ) ).
-      CATCH cx_root INTO DATA(lo_error).
-        cl_abap_unit_assert=>fail( msg = |Job failed: { lo_error->get_text( ) }| ).
+      CATCH cx_root INTO DATA(error).
+        cl_abap_unit_assert=>fail( msg = |Job failed: { error->get_text( ) }| ).
     ENDTRY.
 
     SELECT ExternalProcessedObjectID, RunUUID, State
@@ -107,21 +107,21 @@ CLASS ltc_run_job IMPLEMENTATION.
       WHERE UUID = @run_uuid
       INTO @DATA(run).
     cl_abap_unit_assert=>assert_equals( act = run-TotalNumber exp = 2 msg = 'Total number set by the framework' ).
-    cl_abap_unit_assert=>assert_equals( act = run-ApplicationName exp = zif_prc_run=>co_application_names-demo_rate_adjustment ).
+    cl_abap_unit_assert=>assert_equals( act = run-ApplicationName exp = zcl_prc_test_proc_fixture=>co_application_name ).
     cl_abap_unit_assert=>assert_equals( act = run-ExecutionStatus exp = zif_prc_run=>co_execution_status-finished
                                         msg = 'Run finished and saved' ).
   ENDMETHOD.
 
 
   METHOD unknown_parameter_aborts.
-    " Parameter not defined by the job: abort before a run exists (formerly ASSERT)
+    " Parameter not defined by the job: the job is aborted with a message before a run exists
     TRY.
         NEW lcl_test_job( )->if_apj_rt_exec_object~execute(
             VALUE #( ( selname = 'S_XXX' kind = 'S' sign = 'I' option = 'EQ' low = 'X' ) ) ).
         cl_abap_unit_assert=>fail( msg = 'Job must be aborted' ).
-      CATCH cx_apj_rt_content INTO DATA(lo_abort).
-        cl_abap_unit_assert=>assert_equals( act = lo_abort->if_t100_message~t100key-msgid exp = 'ZPRC_RUN' ).
-        cl_abap_unit_assert=>assert_equals( act = lo_abort->if_t100_message~t100key-msgno exp = '001'
+      CATCH cx_apj_rt_content INTO DATA(abort).
+        cl_abap_unit_assert=>assert_equals( act = abort->if_t100_message~t100key-msgid exp = 'ZPRC_RUN' ).
+        cl_abap_unit_assert=>assert_equals( act = abort->if_t100_message~t100key-msgno exp = '001'
                                             msg = 'Parameter is not defined in job' ).
     ENDTRY.
   ENDMETHOD.
@@ -198,7 +198,7 @@ CLASS ltc_initiate_run IMPLEMENTATION.
            ENTITY Run
            EXECUTE initiateRun
            FROM VALUE #( ( %cid   = 'INIT'
-                           %param = VALUE #( applicationName    = zif_prc_run=>co_application_names-demo_rate_adjustment
+                           %param = VALUE #( applicationName    = zcl_prc_test_proc_fixture=>co_application_name
                                              jobName            = co_job_name
                                              jobTemplateName    = i_template
                                              selectOptionString = /ui2/cl_json=>serialize( data = i_parameters ) ) ) )
@@ -264,22 +264,22 @@ CLASS ltc_initiate_run IMPLEMENTATION.
 
   METHOD initiator_reports_rejection.
     " ZCL_PRC_RUN_INITIATOR=>SCHEDULE_RUN (used by apps such as the demo contract app):
-    " a rejected run comes back as messages instead of a short dump (formerly ASSERT)
-    DATA lt_messages TYPE zcl_prc_run_initiator=>tt_messages.
+    " a rejected run comes back as messages instead of a short dump
+    DATA messages TYPE zcl_prc_run_initiator=>tt_messages.
 
     DATA(run_uuid) = zcl_prc_run_initiator=>get_instance( )->schedule_run(
-      EXPORTING iv_selection_option_json = ``
-                it_parameter_table       = VALUE #( ( name = 'S_XXX' value = `X` ) )
-                iv_application_name      = zif_prc_run=>co_application_names-demo_rate_adjustment
-                iv_job_name              = CONV #( co_job_name )
-                iv_job_template_name     = co_core_template
-      IMPORTING et_messages              = lt_messages ).
+      EXPORTING i_selection_json    = ``
+                i_parameters        = VALUE #( ( name = 'S_XXX' value = `X` ) )
+                i_application_name  = zcl_prc_test_proc_fixture=>co_application_name
+                i_job_name          = CONV #( co_job_name )
+                i_job_template_name = co_core_template
+      IMPORTING e_messages          = messages ).
 
     cl_abap_unit_assert=>assert_initial( act = run_uuid msg = 'No run for a rejected request' ).
     DATA(found_message) = abap_false.
-    LOOP AT lt_messages INTO DATA(lo_message).
-      IF lo_message IS INSTANCE OF if_t100_message.
-        DATA(t100key) = CAST if_t100_message( lo_message )->t100key.
+    LOOP AT messages INTO DATA(message).
+      IF message IS INSTANCE OF if_t100_message.
+        DATA(t100key) = CAST if_t100_message( message )->t100key.
         IF t100key-msgid = 'ZPRC_RUN' AND t100key-msgno = '001'.
           found_message = abap_true.
         ENDIF.

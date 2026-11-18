@@ -90,7 +90,10 @@ CLASS ltc_error_mail_job IMPLEMENTATION.
 
   METHOD run_job.
     NEW zcl_prc_error_mail_job( )->execute_synchronously(
-        VALUE #( ( selname = zcl_prc_error_mail_job=>c_process_name kind = 'S' sign = 'I' option = 'EQ'
+        VALUE #( ( selname = zcl_prc_error_mail_job=>co_parameter-process_name
+                   kind    = 'S'
+                   sign    = 'I'
+                   option  = 'EQ'
                    low     = zcl_prc_test_proc_fixture=>co_process_name ) ) ).
   ENDMETHOD.
 

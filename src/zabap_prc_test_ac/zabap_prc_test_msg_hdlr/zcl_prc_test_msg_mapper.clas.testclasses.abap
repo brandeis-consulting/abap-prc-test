@@ -182,7 +182,7 @@ CLASS ltc_handler IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'FAILED must fail the step' ).
       CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
     ENDTRY.
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_failed( ) ).
   ENDMETHOD.
 
 
@@ -198,7 +198,7 @@ CLASS ltc_handler IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'An E message in REPORTED must fail the step' ).
       CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
     ENDTRY.
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_failed( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = lines( messages ) exp = 1 ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgno exp = '010' ).
@@ -206,7 +206,7 @@ CLASS ltc_handler IMPLEMENTATION.
 
 
   METHOD eml_warning_is_collected.
-    " A warning in REPORTED without FAILED is only collected
+    " A warning in REPORTED without FAILED is only collected: no failure, no error
     DATA reported TYPE RESPONSE FOR REPORTED EARLY zr_prc_runtp.
     reported-run = VALUE #( ( %cid = 'A' %msg = NEW lcx_behv_message( i_severity = if_abap_behv_message=>severity-warning
                                                                      i_t100key  = VALUE #( msgid = 'ZPRC_RUN' msgno = '010' ) ) ) ).
@@ -215,6 +215,7 @@ CLASS ltc_handler IMPLEMENTATION.
       CATCH zcx_prc_unit_of_work_failed.
         cl_abap_unit_assert=>fail( msg = 'A warning does not fail' ).
     ENDTRY.
+    cl_abap_unit_assert=>assert_false( handler->has_failed( ) ).
     cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgty exp = 'W' ).
@@ -228,7 +229,7 @@ CLASS ltc_handler IMPLEMENTATION.
         cl_abap_unit_assert=>fail( msg = 'Error text must fail the step' ).
       CATCH zcx_prc_unit_of_work_failed ##NO_HANDLER.
     ENDTRY.
-    cl_abap_unit_assert=>assert_true( handler->has_errors( ) ).
+    cl_abap_unit_assert=>assert_true( handler->has_failed( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgid exp = 'SY' ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgno exp = '499' ).
@@ -242,6 +243,7 @@ CLASS ltc_handler IMPLEMENTATION.
       CATCH zcx_prc_unit_of_work_failed.
         cl_abap_unit_assert=>fail( msg = 'A warning does not fail' ).
     ENDTRY.
+    cl_abap_unit_assert=>assert_false( handler->has_failed( ) ).
     cl_abap_unit_assert=>assert_false( handler->has_errors( ) ).
     DATA(messages) = handler->get_messages( ).
     cl_abap_unit_assert=>assert_equals( act = messages[ 1 ]-msgty exp = 'W' ).

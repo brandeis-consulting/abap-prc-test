@@ -2,18 +2,6 @@
 "!
 "! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
 "! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
-"! <p class="shorttext synchronized">PRC Test: Process for RAP BO error scenarios</p>
-"!
-"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
-"! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
-"! <p class="shorttext synchronized">PRC Test: Process for RAP BO error scenarios</p>
-"!
-"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
-"! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
-"! <p class="shorttext synchronized">PRC Test: Process for RAP BO error scenarios</p>
-"!
-"! Minimal test process START -> FINISHED. The scenario is passed as PayloadJson
-"! and determines which action of the test BO ZR_PRC_Test_RapErr is executed.
 CLASS zcl_prc_test_raperr_proc DEFINITION
   PUBLIC
   FINAL
@@ -39,7 +27,7 @@ CLASS zcl_prc_test_raperr_proc DEFINITION
                  late_save_failed        TYPE ty_scenario VALUE `LATE_SAVE_FAILED`,
                END OF scenario.
 
-    "! Creates the processed object and processes it synchronously (direct_execution).
+    "! Creates the processed object and processes it in this session (CREATE_AND_PROCESS).
     "!
     "! @parameter i_bo_uuid  | UUID of the ZR_PRC_Test_RapErr instance
     "! @parameter i_scenario | Scenario, see constants SCENARIO
@@ -114,13 +102,13 @@ CLASS zcl_prc_test_raperr_proc IMPLEMENTATION.
 
 
   METHOD get_scenario.
-    DATA ls_payload TYPE ty_payload.
+    DATA payload TYPE ty_payload.
     TRY.
-        xco_cp_json=>data->from_string( i_payload )->write_to( REF #( ls_payload ) ).
+        xco_cp_json=>data->from_string( i_payload )->write_to( REF #( payload ) ).
       CATCH cx_root ##CATCH_ALL ##NO_HANDLER.
         " empty scenario -> reported as unknown by the transition
     ENDTRY.
-    r_scenario = ls_payload-scenario.
+    r_scenario = payload-scenario.
   ENDMETHOD.
 
 ENDCLASS.

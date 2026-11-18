@@ -1,4 +1,5 @@
-managed with additional save implementation in class zbp_r_prc_test_raperr unique;
+// and cleanup: the saver clears its own buffer also after ROLLBACK ENTITIES
+managed with additional save and cleanup implementation in class zbp_r_prc_test_raperr unique;
 strict ( 2 );
 
 define behavior for ZR_PRC_Test_RapErr alias RapErr

@@ -103,11 +103,14 @@ CLASS ltc_transitions DEFINITION FINAL
     METHODS send_without_notification     FOR TESTING.
 
     "! Runs the transition of I_PROCESS starting in I_STATE with C_PAYLOAD.
-    "! E_FAILED = ABAP_TRUE if it raised; header and messages in HANDLER.
+    "! E_FAILED = ABAP_TRUE if it raised; then E_HEADER is the step header as the
+    "! engine chooses it (ZCL_PRC_STEP_HEADER=>FOR_FAILURE with the failure message
+    "! of the transition). All messages in HANDLER.
     METHODS transition IMPORTING i_process   TYPE REF TO zif_prc_process
                                  i_state     TYPE zif_prc_process=>ty_state
                        EXPORTING e_new_state TYPE zif_prc_process=>ty_state
                                  e_failed    TYPE abap_bool
+                                 e_header    TYPE zif_prc_message_handler=>ty_message_details
                        CHANGING  c_payload   TYPE zprc_payload_json.
 
     "! Given object of the test process with header severity I_MSGTY and mail address I_MAIL
@@ -130,21 +133,23 @@ CLASS ltc_transitions IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD transition.
-    CLEAR: e_new_state, e_failed.
+    CLEAR: e_new_state, e_failed, e_header.
     handler = zcl_prc_msg_handler_for_test=>create( ).
-    DATA(lo_transition) = i_process->get_transition_handler( i_start_state      = i_state
-                                                             i_processed_object = 'TEST' ).
-    lo_transition->initialize( i_process_name              = 'TEST'
-                               i_processed_object_ext_id   = 'TEST'
-                               i_processed_object_ext_uuid = VALUE #( )
-                               i_message_handler           = handler ).
+    DATA(transition_handler) = i_process->get_transition_handler( i_start_state      = i_state
+                                                                  i_processed_object = 'TEST' ).
+    transition_handler->initialize( i_process_name              = 'TEST'
+                                    i_processed_object_ext_id   = 'TEST'
+                                    i_processed_object_ext_uuid = VALUE #( )
+                                    i_message_handler           = handler ).
     TRY.
-        e_new_state = lo_transition->perform_transition( EXPORTING i_start_state  = i_state
-                                                         CHANGING  c_payload_json = c_payload ).
+        e_new_state = transition_handler->perform_transition( EXPORTING i_start_state  = i_state
+                                                              CHANGING  c_payload_json = c_payload ).
       CATCH zcx_prc_unit_of_work_failed.
         e_failed = abap_true.
-      CATCH cx_root INTO DATA(lo_unexpected).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lo_unexpected->get_text( ) }| ).
+        e_header = zcl_prc_step_header=>for_failure( i_message_handler = handler
+                                                     i_failure_message = transition_handler->get_failure_message( ) ).
+      CATCH cx_root INTO DATA(unexpected).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { unexpected->get_text( ) }| ).
     ENDTRY.
   ENDMETHOD.
 
@@ -212,13 +217,11 @@ CLASS ltc_transitions IMPLEMENTATION.
     transition( EXPORTING i_process = NEW zcl_prc_notif_error_proc( )
                           i_state   = zif_prc_process=>co_start
                 IMPORTING e_failed  = DATA(failed)
+                          e_header  = DATA(header)
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( failed ).
-    " The last error of the step
-    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
-    ENDLOOP.
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '007' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgno exp = '007' msg = 'Step header' ).
   ENDMETHOD.
 
   METHOD run_prepare_run_not_found.
@@ -226,14 +229,12 @@ CLASS ltc_transitions IMPLEMENTATION.
     transition( EXPORTING i_process = NEW zcl_prc_notif_run_proc( )
                           i_state   = zif_prc_process=>co_start
                 IMPORTING e_failed  = DATA(failed)
+                          e_header  = DATA(header)
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( failed ).
-    " The last error of the step
-    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
-    ENDLOOP.
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgid exp = 'ZPRC_NOTIFICATION' ).
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '009' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgid exp = 'ZPRC_NOTIFICATION' msg = 'Step header' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgno exp = '009' msg = 'Step header' ).
   ENDMETHOD.
 
   METHOD send_without_notification.
@@ -241,13 +242,17 @@ CLASS ltc_transitions IMPLEMENTATION.
     transition( EXPORTING i_process = NEW zcl_prc_notif_error_proc( )
                           i_state   = zcl_prc_notification=>co_prepared
                 IMPORTING e_failed  = DATA(failed)
+                          e_header  = DATA(header)
                 CHANGING  c_payload = payload ).
 
     cl_abap_unit_assert=>assert_true( act = failed msg = 'Nothing prepared, nothing sent' ).
-    " The last error of the step
-    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
-    ENDLOOP.
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '007' ).
+    " Header: the failure message of the send step - no recipient known, so without address
+    cl_abap_unit_assert=>assert_equals( act = header-msgid exp = 'ZPRC_NOTIFICATION' msg = 'Step header' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgno exp = '006' msg = 'Step header: could not be sent' ).
+    " The cause is kept below the header
+    DATA(messages) = handler->get_messages( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( messages[ msgno = '007' msgty = 'E' ] ) )
+                                      msg = 'Cause 007 kept as detail message' ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -275,9 +280,11 @@ CLASS ltc_run_prepare DEFINITION FINAL
     METHODS mail_of_run_creator  FOR TESTING.
     METHODS creator_without_mail FOR TESTING.
 
-    "! Runs the prepare step for the given run; E_FAILED = ABAP_TRUE if it raised
+    "! Runs the prepare step for the given run; E_FAILED = ABAP_TRUE if it raised,
+    "! then E_HEADER is the step header as the engine chooses it
     METHODS prepare EXPORTING e_new_state TYPE zif_prc_process=>ty_state
                               e_failed    TYPE abap_bool
+                              e_header    TYPE zif_prc_message_handler=>ty_message_details
                               e_payload   TYPE zcl_prc_notification=>ty_payload.
 ENDCLASS.
 
@@ -307,23 +314,25 @@ CLASS ltc_run_prepare IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD prepare.
-    CLEAR: e_new_state, e_failed, e_payload.
+    CLEAR: e_new_state, e_failed, e_header, e_payload.
     handler = zcl_prc_msg_handler_for_test=>create( ).
     DATA(payload) = zcl_prc_notification=>payload_to_json( VALUE #( run_uuid = run_uuid ) ).
-    DATA(lo_process) = CAST zif_prc_process( NEW zcl_prc_notif_run_proc( ) ).
-    DATA(lo_transition) = lo_process->get_transition_handler( i_start_state      = zif_prc_process=>co_start
-                                                              i_processed_object = 'TEST' ).
-    lo_transition->initialize( i_process_name              = 'TEST'
-                               i_processed_object_ext_id   = 'TEST'
-                               i_processed_object_ext_uuid = VALUE #( )
-                               i_message_handler           = handler ).
+    DATA(process) = CAST zif_prc_process( NEW zcl_prc_notif_run_proc( ) ).
+    DATA(transition_handler) = process->get_transition_handler( i_start_state      = zif_prc_process=>co_start
+                                                                i_processed_object = 'TEST' ).
+    transition_handler->initialize( i_process_name              = 'TEST'
+                                    i_processed_object_ext_id   = 'TEST'
+                                    i_processed_object_ext_uuid = VALUE #( )
+                                    i_message_handler           = handler ).
     TRY.
-        e_new_state = lo_transition->perform_transition( EXPORTING i_start_state  = zif_prc_process=>co_start
-                                                         CHANGING  c_payload_json = payload ).
+        e_new_state = transition_handler->perform_transition( EXPORTING i_start_state  = zif_prc_process=>co_start
+                                                              CHANGING  c_payload_json = payload ).
       CATCH zcx_prc_unit_of_work_failed.
         e_failed = abap_true.
-      CATCH cx_root INTO DATA(lo_unexpected).
-        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { lo_unexpected->get_text( ) }| ).
+        e_header = zcl_prc_step_header=>for_failure( i_message_handler = handler
+                                                     i_failure_message = transition_handler->get_failure_message( ) ).
+      CATCH cx_root INTO DATA(unexpected).
+        cl_abap_unit_assert=>fail( msg = |Unexpected exception: { unexpected->get_text( ) }| ).
     ENDTRY.
     zcl_prc_notification=>payload_from_json( EXPORTING i_json = payload IMPORTING e_payload = e_payload ).
   ENDMETHOD.
@@ -346,14 +355,12 @@ CLASS ltc_run_prepare IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD creator_without_mail.
-    prepare( IMPORTING e_failed = DATA(failed) ).
+    prepare( IMPORTING e_failed = DATA(failed)
+                       e_header = DATA(header) ).
 
     cl_abap_unit_assert=>assert_true( act = failed msg = 'No mail address, nothing to send' ).
-    " The last error of the step
-    LOOP AT handler->get_messages( ) INTO DATA(last_error) WHERE msgty = 'E' ##NEEDED.
-    ENDLOOP.
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgid exp = 'ZPRC_NOTIFICATION' ).
-    cl_abap_unit_assert=>assert_equals( act = last_error-msgno exp = '004' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgid exp = 'ZPRC_NOTIFICATION' msg = 'Step header' ).
+    cl_abap_unit_assert=>assert_equals( act = header-msgno exp = '004' msg = 'Step header' ).
   ENDMETHOD.
 ENDCLASS.
 
@@ -391,14 +398,14 @@ CLASS ltc_send_and_links IMPLEMENTATION.
 
   METHOD system_url_from_icm.
     " The Standard ABAP implementation (on premise / private cloud); missing on BTP - nothing to check there
-    DATA lo_system_url TYPE REF TO zif_prc_system_url.
+    DATA system_url TYPE REF TO zif_prc_system_url.
     TRY.
-        CREATE OBJECT lo_system_url TYPE (zif_prc_system_url=>co_implementation).
+        CREATE OBJECT system_url TYPE (zif_prc_system_url=>co_implementation).
       CATCH cx_sy_create_object_error.
         RETURN.
     ENDTRY.
 
-    DATA(url) = lo_system_url->get_system_url( ).
+    DATA(url) = system_url->get_system_url( ).
     cl_abap_unit_assert=>assert_char_cp( act = url exp = 'http*://*' msg = |Protocol and host: { url }| ).
     cl_abap_unit_assert=>assert_char_np( act = url exp = '*/' msg = 'No trailing slash (the launchpad path follows)' ).
   ENDMETHOD.

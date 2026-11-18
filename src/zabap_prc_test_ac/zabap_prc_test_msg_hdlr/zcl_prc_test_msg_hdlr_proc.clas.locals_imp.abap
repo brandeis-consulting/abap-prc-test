@@ -54,8 +54,9 @@ CLASS lcl_transition DEFINITION INHERITING FROM zcl_prc_transition_handlr_base.
     DATA mv_start_state TYPE ty_state.
 
     "! ADD_MESSAGE_FROM_SY with ZPRC_TEST_MSG_HDLR/001
-    METHODS via_sy   IMPORTING i_type TYPE symsgty
-                               i_v1   TYPE symsgv
+    METHODS via_sy   IMPORTING i_type      TYPE symsgty
+                               i_v1        TYPE symsgv
+                               i_fail_step TYPE abap_bool DEFAULT abap_true
                      RAISING   zcx_prc_unit_of_work_failed.
 
     "! ADD_MESSAGE_FROM_TEXT
@@ -134,6 +135,22 @@ CLASS lcl_transition IMPLEMENTATION.
       " Unexpected errors
       WHEN state-unexpected_t100_chain.
         raise_unexpected_chain( ).
+
+      " Findings (I_FAIL_STEP = ABAP_FALSE): through SY and a BAPI result, back to the start state.
+      " GET_FAILURE_MESSAGE declares 003 for FINDINGS - it must not become the header.
+      WHEN state-findings.
+        via_sy( i_type = 'W' i_v1 = 'w' ).
+        via_sy( i_type = 'E' i_v1 = 'e1' i_fail_step = abap_false ).
+        handler->add_bapi_result( i_bapiret   = VALUE #( ( bapi_line( i_type = 'E' i_v1 = 'e2' ) ) )
+                                  i_fail_step = abap_false ).
+        r_new_state = i_start_state.
+      " Findings, but the transition goes on to FINISHED: program error 024
+      WHEN state-findings_wrong_end.
+        via_sy( i_type = 'E' i_v1 = 'e' i_fail_step = abap_false ).
+      " A finding, then a real error: the step fails as usual, the finding is kept
+      WHEN state-findings_then_failure.
+        via_sy( i_type = 'E' i_v1 = 'e1' i_fail_step = abap_false ).
+        via_sy( i_type = 'E' i_v1 = 'e2' ).
     ENDCASE.
   ENDMETHOD.
 
@@ -155,7 +172,8 @@ CLASS lcl_transition IMPLEMENTATION.
 
   METHOD get_failure_message.
     CASE mv_start_state.
-      WHEN zcl_prc_test_msg_hdlr_proc=>state-failure_header.
+      WHEN zcl_prc_test_msg_hdlr_proc=>state-failure_header
+        OR zcl_prc_test_msg_hdlr_proc=>state-findings.
         MESSAGE e003(zprc_test_msg_hdlr) WITH mv_start_state INTO DATA(lv_dummy) ##NEEDED.
         r_message = sy_message( ).
       WHEN zcl_prc_test_msg_hdlr_proc=>state-hdr_set_failure_header.
@@ -168,7 +186,7 @@ CLASS lcl_transition IMPLEMENTATION.
 
   METHOD via_sy.
     MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE i_type NUMBER '001' WITH i_v1 INTO DATA(lv_dummy) ##NEEDED.
-    get_message_handler( )->add_message_from_sy( ).
+    get_message_handler( )->add_message_from_sy( i_fail_step ).
   ENDMETHOD.
 
 

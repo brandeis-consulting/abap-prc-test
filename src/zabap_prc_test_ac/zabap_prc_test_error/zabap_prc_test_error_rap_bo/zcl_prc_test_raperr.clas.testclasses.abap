@@ -273,11 +273,11 @@ CLASS ltc_modify_lock_error IMPLEMENTATION.
           payloadJson         = zcl_prc_test_raperr_proc=>build_payload( get_scenario( ) ) ) ) ).
     COMMIT WORK.
 
-    DATA(lv_ext_id) = zcl_prc_test_raperr_proc=>get_external_id( mv_bo_uuid ).
+    DATA(ext_id) = zcl_prc_test_raperr_proc=>get_external_id( mv_bo_uuid ).
     SELECT SINGLE UUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
       WHERE ProcessName               = @zcl_prc_test_raperr_proc=>co_process_name
-        AND ExternalProcessedObjectID = @lv_ext_id
-      INTO @DATA(lv_processed_object_uuid).
+        AND ExternalProcessedObjectID = @ext_id
+      INTO @DATA(processed_object_uuid).
 
     " 2) The test session holds the lock itself. A lock holder started by
     "    CL_ABAP_PARALLEL would be a sibling of the isolated step of the engine,
@@ -285,26 +285,29 @@ CLASS ltc_modify_lock_error IMPLEMENTATION.
     SET LOCKS OF zr_prc_test_raperr
         ENTITY RapErr
         FROM VALUE #( ( UUID = mv_bo_uuid ) )
-        FAILED DATA(ls_lock_failed)
-        REPORTED DATA(ls_lock_reported) ##NEEDED.
-    cl_abap_unit_assert=>assert_initial( act = ls_lock_failed
+        FAILED DATA(lock_failed)
+        REPORTED DATA(lock_reported) ##NEEDED.
+    cl_abap_unit_assert=>assert_initial( act = lock_failed
                                          msg = 'Precondition: the test instance could not be locked' ).
 
     " 3) Process; the isolated step collides with the lock of this session
     zcl_prc_processing_api=>get_instance( )->process_synchronously(
-        VALUE #( ( selname = zcl_prc_retry_job=>s_uuid sign = 'I' option = 'EQ' low = lv_processed_object_uuid ) ) ).
+        VALUE #( ( selname = zcl_prc_retry_job=>co_parameter-uuid
+                   sign    = 'I'
+                   option  = 'EQ'
+                   low     = processed_object_uuid ) ) ).
     ROLLBACK ENTITIES.
 
     " 4) Expectation
-    DATA(lv_state) = get_state( ).
-    cl_abap_unit_assert=>assert_equals( act = lv_state
+    DATA(state) = get_state( ).
+    cl_abap_unit_assert=>assert_equals( act = state
                                         exp = zif_prc_process=>co_start
-                                        msg = |State { lv_state } instead of START - the lock did not collide| ).
+                                        msg = |State { state } instead of START - the lock did not collide| ).
 
     " The lock error must be stored as a readable error message - no matter
     " whether it comes from the RAP framework or is created by the PRC from the fail cause
-    DATA(lt_messages) = get_persisted_messages( ).
-    cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( lt_messages[ KEY by_severity msgty = 'E' ] ) )
+    DATA(messages) = get_persisted_messages( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( line_exists( messages[ KEY by_severity msgty = 'E' ] ) )
                                       msg = 'No error message for the lock error in the PRC persistence' ).
   ENDMETHOD.
 

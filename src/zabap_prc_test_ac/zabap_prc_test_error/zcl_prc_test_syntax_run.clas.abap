@@ -1,20 +1,5 @@
 "! <p class="shorttext synchronized">PRC Test: Manual syntax error test</p>
 "!
-"! Creates and/or processes objects of process PRC_TEST_SYNTAX_ERROR. No static
-"! reference to the process or handler class, so this classrun stays runnable while
-"! one of them has a syntax error. Choose the step with constant CO_MODE.
-"!
-"! Case 0 (all active, CREATE_AND_PROCESS): object FINISHED.
-"! Case 1 (delete DTEL ZPRC_TEST_SYNTAX_HANDLER, CREATE_AND_PROCESS): syntax error in
-"!   the handler, loaded in the step session - failed step with the abort text.
-"! Case 2 (delete DTEL ZPRC_TEST_SYNTAX_PROCESS): syntax error in the process class,
-"!   also loaded in this main session.
-"!   2a CREATE_AND_PROCESS: creation itself (DB writer, step total)
-"!   2b CREATE_ONLY with intact class, then delete the DTEL, then PROCESS_ONLY:
-"!      processing of an existing object (main session of the engine)
-"! Restore the data element after each case.
-"! <p class="shorttext synchronized">PRC Test: Manual syntax error test</p>
-"!
 "! Creates and/or processes objects of process TEST_SYNTAX_ERROR. No static
 "! reference to the process or handler class, so this classrun stays runnable while
 "! one of them has a syntax error. Choose the step with constant CO_MODE.
@@ -54,7 +39,7 @@ CLASS zcl_prc_test_syntax_run IMPLEMENTATION.
     TRY.
         IF co_mode = `PROCESS_ONLY`.
           " Same engine entry as the retry job: all due objects of the process
-          api->process_synchronously( VALUE #( ( selname = zcl_prc_retry_job=>c_process_name
+          api->process_synchronously( VALUE #( ( selname = zcl_prc_retry_job=>co_parameter-process_name
                                                  sign = 'I' option = 'EQ' low = co_process_name ) ) ).
         ELSE.
           DATA(uuid)   = xco_cp=>uuid( )->value.
@@ -88,4 +73,3 @@ CLASS zcl_prc_test_syntax_run IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
-

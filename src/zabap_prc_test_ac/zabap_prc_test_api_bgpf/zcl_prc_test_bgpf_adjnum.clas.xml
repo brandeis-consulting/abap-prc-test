@@ -5,7 +5,7 @@
    <VSEOCLASS>
     <CLSNAME>ZCL_PRC_TEST_BGPF_ADJNUM</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>PRC Test: Processing API bgPF aus adjust_numbers</DESCRIPT>
+    <DESCRIPT>PRC Test: Processing API bgPF from adjust_numbers</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
