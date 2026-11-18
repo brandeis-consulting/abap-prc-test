@@ -911,8 +911,8 @@ ENDCLASS.
 
 
 "! I_FAIL_STEP = ABAP_FALSE on every ADD method of the handler API directly (no
-"! processing, no persistence): the error is recorded, nothing is raised and
-"! HAS_ERRORS stays ABAP_FALSE.
+"! processing, no persistence): the error is recorded as a finding - nothing is
+"! raised, HAS_FAILED stays ABAP_FALSE and HAS_ERRORS is ABAP_TRUE.
 CLASS ltc_findings_api DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -926,7 +926,7 @@ CLASS ltc_findings_api DEFINITION FINAL
 
     METHODS setup.
 
-    "! Asserts no failure and the message key of the last message
+    "! Asserts a finding: no failure, an error, and the message key of the last message
     METHODS assert_finding IMPORTING i_exp TYPE symsg.
 
     METHODS from_sy                 FOR TESTING RAISING cx_static_check.

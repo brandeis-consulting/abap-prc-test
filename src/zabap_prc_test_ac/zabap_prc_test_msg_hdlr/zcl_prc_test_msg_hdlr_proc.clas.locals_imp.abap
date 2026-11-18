@@ -185,7 +185,7 @@ CLASS lcl_transition IMPLEMENTATION.
 
 
   METHOD via_sy.
-    MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE i_type NUMBER '001' WITH i_v1 INTO DATA(lv_dummy) ##NEEDED.
+    MESSAGE ID 'ZPRC_TEST_MSG_HDLR' TYPE i_type NUMBER '001' WITH i_v1 INTO DATA(dummy) ##NEEDED.
     get_message_handler( )->add_message_from_sy( i_fail_step ).
   ENDMETHOD.
 

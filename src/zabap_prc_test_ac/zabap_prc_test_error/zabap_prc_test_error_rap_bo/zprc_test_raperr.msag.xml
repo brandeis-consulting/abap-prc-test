@@ -111,6 +111,103 @@
      <TEXT>Unknown scenario &apos;&amp;1&apos; in payload</TEXT>
     </T100>
    </T100>
+   <I18N_LANGS>
+    <LANGU>D</LANGU>
+   </I18N_LANGS>
+   <T100T>
+    <T100T>
+     <SPRSL>D</SPRSL>
+     <ARBGB>ZPRC_TEST_RAPERR</ARBGB>
+     <STEXT>PRC Test: RAP-BO-Fehlerszenarien</STEXT>
+    </T100T>
+   </T100T>
+   <T100_TEXTS>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>001</MSGNR>
+     <TEXT>NO_ERROR: Warnung aus Aktion noError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>002</MSGNR>
+     <TEXT>NO_ERROR: Information aus Aktion noError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>003</MSGNR>
+     <TEXT>MODIFY_ERROR: Erster Fehler aus Aktion modifyError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>004</MSGNR>
+     <TEXT>MODIFY_ERROR: Zweiter Fehler aus Aktion modifyError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>005</MSGNR>
+     <TEXT>MODIFY_ERROR: Warnung aus Aktion modifyError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>006</MSGNR>
+     <TEXT>MODIFY_ERROR: Information aus Aktion modifyError</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>007</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Erster Fehler in check_before_save</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>008</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Zweiter Fehler in check_before_save</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>009</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Warnung in check_before_save</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>010</MSGNR>
+     <TEXT>CHECK_BEFORE_SAVE_ERROR: Information in check_before_save</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>011</MSGNR>
+     <TEXT>SAVE_MODIFIED: Erster Fehler aus save_modified</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>012</MSGNR>
+     <TEXT>SAVE_MODIFIED: Zweiter Fehler aus save_modified</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>013</MSGNR>
+     <TEXT>SAVE_MODIFIED: Warnung aus save_modified</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>014</MSGNR>
+     <TEXT>SAVE_MODIFIED: Information aus save_modified</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>015</MSGNR>
+     <TEXT>Szenario &amp;1 für Instanz &amp;2 erfolgreich verarbeitet</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>016</MSGNR>
+     <TEXT>Szenario &amp;1 für Instanz &amp;2 fehlgeschlagen</TEXT>
+    </item>
+    <item>
+     <SPRSL>D</SPRSL>
+     <MSGNR>017</MSGNR>
+     <TEXT>Unbekanntes Szenario &apos;&amp;1&apos; im Payload</TEXT>
+    </item>
+   </T100_TEXTS>
   </asx:values>
  </asx:abap>
 </abapGit>

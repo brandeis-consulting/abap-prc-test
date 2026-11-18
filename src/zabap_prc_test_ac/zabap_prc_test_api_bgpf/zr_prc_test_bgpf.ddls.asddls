@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'PRC Test: BO bgPF aus adjust_numbers'
+@EndUserText.label: 'PRC Test: BO for bgPF (adjust_numbers)'
 define root view entity ZR_PRC_Test_Bgpf
   as select from zprc_test_bgpf
 {

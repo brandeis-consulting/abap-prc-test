@@ -13,6 +13,12 @@
     <UNICODE>5</UNICODE>
     <CLSDEFINT>ZR_PRC_TEST_BGPF</CLSDEFINT>
    </VSEOCLASS>
+   <DESCRIPTIONS_CLASS>
+    <SEOCLASSTX>
+     <LANGU>D</LANGU>
+     <DESCRIPT>PRC Test: Verhaltensimplementierung ZR_PRC_Test_Bgpf</DESCRIPT>
+    </SEOCLASSTX>
+   </DESCRIPTIONS_CLASS>
   </asx:values>
  </asx:abap>
 </abapGit>

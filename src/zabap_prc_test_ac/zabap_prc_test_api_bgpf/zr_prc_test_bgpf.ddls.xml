@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZR_PRC_TEST_BGPF</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>PRC Test: BO fuer bgPF aus adjust_numbers</DDTEXT>
+    <DDTEXT>PRC Test: BO for bgPF from adjust_numbers</DDTEXT>
     <SOURCE_TYPE>W</SOURCE_TYPE>
     <ABAP_LANGUAGE_VERSION>5</ABAP_LANGUAGE_VERSION>
    </DDLS>
