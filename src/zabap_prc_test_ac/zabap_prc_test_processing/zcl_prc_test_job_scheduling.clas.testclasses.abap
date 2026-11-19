@@ -19,6 +19,16 @@ CLASS lcl_scheduler_double IMPLEMENTATION.
     ENDIF.
     APPEND VALUE #( template = i_template_name text = i_job_text parameters = i_parameters ) TO calls.
   ENDMETHOD.
+
+  METHOD zif_prc_job_scheduler~can_schedule.
+    " The checks of initiateRun are tested with the real job framework (ZCL_PRC_TEST_RUN_JOB)
+    r_can_schedule = abap_true.
+  ENDMETHOD.
+
+  METHOD zif_prc_job_scheduler~get_template_parameters.
+    " Not supported: initiateRun skips the parameter check
+    CLEAR: e_supported, e_names.
+  ENDMETHOD.
 ENDCLASS.
 
 

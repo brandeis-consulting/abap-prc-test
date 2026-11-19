@@ -309,10 +309,12 @@ CLASS ltc_engine IMPLEMENTATION.
 ENDCLASS.
 
 
-"! Run job with a simulation run (as created by initiateRun): one select option S_ID, P_UUID.
+"! Run job that decides about the simulation by a parameter of its own (P_SIMTST - the
+"! name is up to the job): one select option S_ID, the parameter, P_UUID.
 CLASS lcl_job DEFINITION FINAL INHERITING FROM zcl_prc_run_job FOR TESTING.
   PUBLIC SECTION.
-    CONSTANTS co_ids TYPE zif_prc_run=>ty_run_parameter VALUE 'S_ID'.
+    CONSTANTS co_ids        TYPE zif_prc_run=>ty_run_parameter VALUE 'S_ID'.
+    CONSTANTS co_simulation TYPE zif_prc_run=>ty_run_parameter VALUE 'P_SIMTST'.
     CLASS-DATA process_class TYPE zprc_process_impl_class.
     METHODS if_apj_dt_exec_object~get_parameters REDEFINITION.
   PROTECTED SECTION.
@@ -320,12 +322,15 @@ CLASS lcl_job DEFINITION FINAL INHERITING FROM zcl_prc_run_job FOR TESTING.
     METHODS get_process          REDEFINITION.
     METHODS get_application_name REDEFINITION.
     METHODS notify_on_completion REDEFINITION.
+    METHODS is_simulation        REDEFINITION.
 ENDCLASS.
 
 CLASS lcl_job IMPLEMENTATION.
   METHOD if_apj_dt_exec_object~get_parameters.
     et_parameter_def = VALUE #( ( selname = co_ids kind = if_apj_dt_exec_object=>select_option
                                   datatype = 'C' length = 30 param_text = 'IDs' )
+                                ( selname = co_simulation kind = if_apj_dt_exec_object=>parameter
+                                  datatype = 'C' length = 1 checkbox_ind = abap_true param_text = 'Simulation' )
                                 ( selname = zif_prc_run=>co_parameter-p_uuid kind = if_apj_dt_exec_object=>parameter
                                   datatype = 'C' length = 32 param_text = 'Run UUID' ) ).
   ENDMETHOD.
@@ -350,11 +355,17 @@ CLASS lcl_job IMPLEMENTATION.
     " The notification is tested in LTC_RUN_NOTIFICATION
     r_notify = abap_false.
   ENDMETHOD.
+
+  METHOD is_simulation.
+    DATA(simulation) = VALUE #( i_parameter_values[ name = co_simulation ] OPTIONAL ).
+    r_simulation = xsdbool( simulation-value = abap_true ).
+  ENDMETHOD.
 ENDCLASS.
 
 
-"! Run job: a simulation run is processed; with a process that does not allow it, the run
-"! is aborted before any object exists.
+"! Run job: the job decides about the simulation (IS_SIMULATION) - for a run created by
+"! initiateRun as well as for a job scheduled directly. With a process that does not allow
+"! it, the run is aborted before any object exists.
 CLASS ltc_run_job DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION MEDIUM.
 
@@ -365,9 +376,15 @@ CLASS ltc_run_job DEFINITION FINAL
     METHODS teardown.
 
     METHODS simulation_run_processed    FOR TESTING.
+    METHODS direct_job_simulation       FOR TESTING.
+    METHODS job_decides_no_simulation   FOR TESTING.
     METHODS denied_process_aborts_run   FOR TESTING.
 
-    METHODS execute RAISING cx_apj_rt_content.
+    "! Executes the job with two IDs; with the UUID of the planned run unless I_DIRECT
+    METHODS execute IMPORTING i_simulation TYPE abap_boolean
+                              i_direct     TYPE abap_bool DEFAULT abap_false
+                    RAISING   cx_apj_rt_content.
+    METHODS assert_simulation_run IMPORTING i_run_uuid TYPE sysuuid_x16.
 ENDCLASS.
 
 
@@ -377,19 +394,26 @@ CLASS ltc_run_job IMPLEMENTATION.
     zcl_prc_test_proc_fixture=>delete_own_data( zcl_prc_test_sim_proc=>co_process_name ).
     DELETE FROM zprc_test_bgpf WHERE id = @zcl_prc_test_sim_proc=>co_marker_id.
 
-    " The run as initiateRun creates it: planned, simulation
+    " The run as initiateRun creates it: planned, without simulation - the job decides
     run_uuid = xco_cp=>uuid( )->value.
     INSERT zprc_run FROM @( VALUE #( uuid             = run_uuid
                                      app_name         = zcl_prc_test_proc_fixture=>co_application_name
                                      job_name         = 'PRC_SIMULATION_TEST'
-                                     execution_status = zif_prc_run=>co_execution_status-planned
-                                     simulation       = abap_true ) ).
+                                     execution_status = zif_prc_run=>co_execution_status-planned ) ).
     COMMIT WORK.
   ENDMETHOD.
 
 
   METHOD teardown.
     ROLLBACK ENTITIES.
+    " Parameters of a run created by the job directly; the fixture deletes the run with its objects
+    SELECT DISTINCT run_uuid FROM zprc_proc_object
+      WHERE process_name = @zcl_prc_test_sim_proc=>co_process_name
+        AND run_uuid    <> @run_uuid
+      INTO TABLE @DATA(direct_runs).
+    LOOP AT direct_runs INTO DATA(direct_run).
+      DELETE FROM zprc_run_params WHERE job_uuid = @direct_run-run_uuid.
+    ENDLOOP.
     zcl_prc_test_proc_fixture=>delete_own_data( zcl_prc_test_sim_proc=>co_process_name ).
     DELETE FROM zprc_run_params WHERE job_uuid = @run_uuid.
     DELETE FROM zprc_run WHERE uuid = @run_uuid.
@@ -399,31 +423,28 @@ CLASS ltc_run_job IMPLEMENTATION.
 
 
   METHOD execute.
-    NEW lcl_job( )->if_apj_rt_exec_object~execute(
-        VALUE #( ( selname = lcl_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'SIMJOB1' )
-                 ( selname = lcl_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'SIMJOB2' )
-                 ( selname = zif_prc_run=>co_parameter-p_uuid kind = 'P' sign = 'I' option = 'EQ'
-                   low = |{ run_uuid }| ) ) ).
+    DATA(parameters) = VALUE zif_prc_processing_engine=>tt_parameters(
+        ( selname = lcl_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'SIMJOB1' )
+        ( selname = lcl_job=>co_ids kind = 'S' sign = 'I' option = 'EQ' low = 'SIMJOB2' )
+        ( selname = lcl_job=>co_simulation kind = 'P' sign = 'I' option = 'EQ' low = i_simulation ) ).
+    IF i_direct = abap_false.
+      APPEND VALUE #( selname = zif_prc_run=>co_parameter-p_uuid kind = 'P' sign = 'I' option = 'EQ'
+                      low = |{ run_uuid }| ) TO parameters.
+    ENDIF.
+    NEW lcl_job( )->if_apj_rt_exec_object~execute( parameters ).
   ENDMETHOD.
 
 
-  METHOD simulation_run_processed.
-    lcl_job=>process_class = zcl_prc_test_sim_proc=>co_class_name.
-    TRY.
-        execute( ).
-      CATCH cx_apj_rt_content INTO DATA(error).
-        cl_abap_unit_assert=>fail( msg = |Job aborted: { error->get_text( ) }| ).
-    ENDTRY.
-
-    SELECT ExecutionStatus, Simulation, TotalNumber FROM zi_prc_run WITH PRIVILEGED ACCESS
-      WHERE UUID = @run_uuid
-      INTO TABLE @DATA(runs).
-    cl_abap_unit_assert=>assert_equals( act = runs[ 1 ]-ExecutionStatus exp = zif_prc_run=>co_execution_status-finished ).
-    cl_abap_unit_assert=>assert_equals( act = runs[ 1 ]-Simulation exp = abap_true msg = 'Run keeps the flag' ).
-    cl_abap_unit_assert=>assert_equals( act = runs[ 1 ]-TotalNumber exp = 2 ).
+  METHOD assert_simulation_run.
+    SELECT SINGLE ExecutionStatus, Simulation, TotalNumber FROM zi_prc_run WITH PRIVILEGED ACCESS
+      WHERE UUID = @i_run_uuid
+      INTO @DATA(run).
+    cl_abap_unit_assert=>assert_equals( act = run-ExecutionStatus exp = zif_prc_run=>co_execution_status-finished ).
+    cl_abap_unit_assert=>assert_equals( act = run-Simulation exp = abap_true msg = 'Run is a simulation' ).
+    cl_abap_unit_assert=>assert_equals( act = run-TotalNumber exp = 2 ).
 
     SELECT State, Simulation FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
-      WHERE RunUUID = @run_uuid
+      WHERE RunUUID = @i_run_uuid
       INTO TABLE @DATA(objects).
     cl_abap_unit_assert=>assert_equals( act = lines( objects ) exp = 2 ).
     LOOP AT objects INTO DATA(object).
@@ -438,22 +459,74 @@ CLASS ltc_run_job IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD simulation_run_processed.
+    " Started from an app: the run exists (initiateRun), the job sets the flag
+    lcl_job=>process_class = zcl_prc_test_sim_proc=>co_class_name.
+    TRY.
+        execute( abap_true ).
+      CATCH cx_apj_rt_content INTO DATA(error).
+        cl_abap_unit_assert=>fail( msg = |Job aborted: { error->get_text( ) }| ).
+    ENDTRY.
+    assert_simulation_run( run_uuid ).
+  ENDMETHOD.
+
+
+  METHOD direct_job_simulation.
+    " Scheduled directly (no P_UUID): the job creates the run as a simulation
+    lcl_job=>process_class = zcl_prc_test_sim_proc=>co_class_name.
+    TRY.
+        execute( i_simulation = abap_true i_direct = abap_true ).
+      CATCH cx_apj_rt_content INTO DATA(error).
+        cl_abap_unit_assert=>fail( msg = |Job aborted: { error->get_text( ) }| ).
+    ENDTRY.
+
+    SELECT SINGLE RunUUID FROM zr_prc_processedobject WITH PRIVILEGED ACCESS
+      WHERE ProcessName               = @zcl_prc_test_sim_proc=>co_process_name
+        AND ExternalProcessedObjectID = 'SIMJOB1'
+      INTO @DATA(direct_run).
+    cl_abap_unit_assert=>assert_subrc( msg = 'Objects of the run created by the job' ).
+    cl_abap_unit_assert=>assert_differs( act = direct_run exp = run_uuid msg = 'A run of its own' ).
+    assert_simulation_run( direct_run ).
+  ENDMETHOD.
+
+
+  METHOD job_decides_no_simulation.
+    " Without the parameter the run is real: the transitions save their changes
+    lcl_job=>process_class = zcl_prc_test_sim_proc=>co_class_name.
+    TRY.
+        execute( abap_false ).
+      CATCH cx_apj_rt_content INTO DATA(error).
+        cl_abap_unit_assert=>fail( msg = |Job aborted: { error->get_text( ) }| ).
+    ENDTRY.
+
+    SELECT SINGLE Simulation FROM zi_prc_run WITH PRIVILEGED ACCESS
+      WHERE UUID = @run_uuid
+      INTO @DATA(simulation).
+    cl_abap_unit_assert=>assert_false( act = simulation msg = 'No simulation' ).
+    SELECT SINGLE @abap_true FROM zprc_test_bgpf
+      WHERE id = @zcl_prc_test_sim_proc=>co_marker_id
+      INTO @DATA(marker_saved).
+    cl_abap_unit_assert=>assert_true( act = marker_saved msg = 'Changes of the transitions saved' ).
+  ENDMETHOD.
+
+
   METHOD denied_process_aborts_run.
     " ZCL_PRC_TEST_BGPF_PROC does not implement SUPPORTS_SIMULATION
     lcl_job=>process_class = zcl_prc_test_bgpf_proc=>co_class_name.
     TRY.
-        execute( ).
+        execute( abap_true ).
         cl_abap_unit_assert=>fail( msg = 'Job must be aborted' ).
       CATCH cx_apj_rt_content INTO DATA(abort).
         cl_abap_unit_assert=>assert_equals( act = abort->if_t100_message~t100key-msgid exp = 'ZPRC_PROCESS_MESSAGE' ).
         cl_abap_unit_assert=>assert_equals( act = abort->if_t100_message~t100key-msgno exp = '026' ).
     ENDTRY.
 
-    SELECT SINGLE ExecutionStatus, MessageNumber FROM zi_prc_run WITH PRIVILEGED ACCESS
+    SELECT SINGLE ExecutionStatus, MessageNumber, Simulation FROM zi_prc_run WITH PRIVILEGED ACCESS
       WHERE UUID = @run_uuid
       INTO @DATA(run).
     cl_abap_unit_assert=>assert_equals( act = run-ExecutionStatus exp = zif_prc_run=>co_execution_status-aborted ).
     cl_abap_unit_assert=>assert_equals( act = run-MessageNumber exp = '026' msg = 'Reason at the run' ).
+    cl_abap_unit_assert=>assert_equals( act = run-Simulation exp = abap_true msg = 'Flag set by the job' ).
 
     SELECT COUNT(*) FROM zprc_proc_object WHERE run_uuid = @run_uuid INTO @DATA(count).
     cl_abap_unit_assert=>assert_equals( act = count exp = 0 msg = 'No object created' ).

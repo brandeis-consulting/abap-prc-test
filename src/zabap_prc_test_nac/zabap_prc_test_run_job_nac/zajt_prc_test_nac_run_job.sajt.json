@@ -1,0 +1,24 @@
+{
+  "formatVersion": "1",
+  "header": {
+    "description": "ABAP-PRC Test: Run Job in Standard ABAP",
+    "originalLanguage": "en"
+  },
+  "generalInformation": {
+    "catalogName": "ZAJC_PRC_TEST_NAC_RUN_JOB"
+  },
+  "parameters": {
+    "singleValueParameters": [
+      {
+        "name": "P_UUID",
+        "value": ""
+      }
+    ],
+    "valueRangesParameters": [
+      {
+        "name": "S_ID",
+        "valueRanges": []
+      }
+    ]
+  }
+}

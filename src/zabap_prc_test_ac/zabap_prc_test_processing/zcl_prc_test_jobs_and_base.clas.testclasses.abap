@@ -201,3 +201,41 @@ CLASS ltc_run_notification IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = lines( mt_notifications ) exp = 1 msg = 'One notification for the run' ).
   ENDMETHOD.
 ENDCLASS.
+
+
+"! Flags of the PRC jobs (C, length 1) are shown as checkboxes in the job templates
+CLASS ltc_job_parameters DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+  PRIVATE SECTION.
+    METHODS flags_are_checkboxes FOR TESTING.
+
+    METHODS assert_flags_are_checkboxes
+      IMPORTING i_job  TYPE REF TO if_apj_dt_exec_object
+                i_name TYPE string.
+ENDCLASS.
+
+CLASS ltc_job_parameters IMPLEMENTATION.
+  METHOD flags_are_checkboxes.
+    assert_flags_are_checkboxes( i_job = NEW zcl_prc_retry_job( )      i_name = `ZCL_PRC_RETRY_JOB` ).
+    assert_flags_are_checkboxes( i_job = NEW zcl_prc_cleanup_job( )    i_name = `ZCL_PRC_CLEANUP_JOB` ).
+    assert_flags_are_checkboxes( i_job = NEW zcl_prc_error_mail_job( ) i_name = `ZCL_PRC_ERROR_MAIL_JOB` ).
+  ENDMETHOD.
+
+  METHOD assert_flags_are_checkboxes.
+    DATA definitions TYPE if_apj_dt_exec_object=>tt_templ_def.
+    DATA values      TYPE if_apj_dt_exec_object=>tt_templ_val.
+
+    TRY.
+        i_job->get_parameters( IMPORTING et_parameter_def = definitions
+                                         et_parameter_val = values ).
+      CATCH cx_root INTO DATA(error).
+        cl_abap_unit_assert=>fail( msg = |{ i_name }: { error->get_text( ) }| ).
+    ENDTRY.
+
+    " KIND is C(1): 'P' single value parameter, 'S' select option (the enum constants are not comparable)
+    LOOP AT definitions INTO DATA(definition) WHERE kind = 'P' AND datatype = 'C' AND length = 1.
+      cl_abap_unit_assert=>assert_true( act  = definition-checkbox_ind
+                                        msg  = |{ i_name } { definition-selname }: flag without checkbox|
+                                        quit = if_abap_unit_constant=>quit-no ).
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
